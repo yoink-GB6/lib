@@ -17,9 +17,6 @@ let pageContainer = null; // Store container reference for use in event handlers
 let likedItems = new Set(); // Track liked items in current session (resets on page refresh)
 let unlockedKeys = new Set(); // Track unlocked privacy keys (resets on page refresh)
 
-// Library-specific edit mode (independent from global edit mode)
-let isLibraryEditable = false;
-const LIBRARY_PASSWORD = 'y';  // Simple password for library editing
 
 export async function mount(container) {
   pageContainer = container;  // Save container reference
@@ -57,7 +54,6 @@ function buildHTML() {
       <h2>📋 指令集</h2>
       <div style="display:flex;gap:8px;align-items:center">
         <button class="btn bn" id="lib-sort-btn" title="切换排序方式">👍 点赞排序</button>
-        <button class="btn bn" id="lib-unlock-btn">🔒 解锁指令编辑</button>
         <button class="btn bp" id="lib-add-btn" style="display:none">＋ 新建</button>
       </div>
     </div>
@@ -192,29 +188,7 @@ function buildHTML() {
   </div>
 </div>
 
-<!-- Password unlock modal (library-specific) -->
-<div id="lib-password-modal" class="tl-modal-overlay">
-  <div class="tl-modal" style="max-width:400px" onmousedown="event.stopPropagation()">
-    <h2>🔓 解锁指令编辑</h2>
-    <p style="color:#889;font-size:13px;margin-bottom:16px">裴公主今天发骚了吗？(y/n)</p>
-    
-    <input 
-      id="lib-password-input" 
-      type="password" 
-      placeholder="输入密码" 
-      autocomplete="off"
-      style="width:100%;padding:10px 12px;margin-bottom:8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);font-size:14px"
-    />
-    <div id="lib-password-error" style="color:#ef4444;font-size:12px;margin-bottom:12px;display:none">
-      密码错误，请重试
-    </div>
-    
-    <div class="mbtns" style="justify-content:flex-end">
-      <button class="btn bn" id="lib-password-cancel">取消</button>
-      <button class="btn bp" id="lib-password-submit">确定</button>
-    </div>
-  </div>
-</div>`;
+`;
 }
 
 function bindControls(container) {
@@ -350,30 +324,6 @@ function bindControls(container) {
     renderGrid(container.querySelector('.lib-layout'));
   });
 
-  // Unlock button
-  container.querySelector('#lib-unlock-btn').addEventListener('click', () => {
-    if (isLibraryEditable) {
-      // Lock
-      isLibraryEditable = false;
-      updateLibraryUI(container);
-      showToast('🔒 已锁定指令编辑');
-    } else {
-      // Show password modal
-      openPasswordModal(container);
-    }
-  });
-
-  // Password modal
-  container.querySelector('#lib-password-cancel').addEventListener('click', () => closePasswordModal(container));
-  container.querySelector('#lib-password-submit').addEventListener('click', () => submitPassword(container));
-  container.querySelector('#lib-password-input').addEventListener('keydown', e => {
-    if (e.key === 'Enter') submitPassword(container);
-    if (e.key === 'Escape') closePasswordModal(container);
-  });
-  container.querySelector('#lib-password-modal').addEventListener('mousedown', e => {
-    if (e.target === container.querySelector('#lib-password-modal')) closePasswordModal(container);
-  });
-
   // Sort buttons
   // Panel toggle
   function toggleLibPanel() {
@@ -474,7 +424,7 @@ function renderTagList(tagListEl) {
     return;
   }
   
-  const editable = isLibraryEditor();
+  const editable = isEditor();
   
   tagListEl.innerHTML = tags.map(tag => {
     const selected = selectedTags.includes(tag);
@@ -656,7 +606,7 @@ function renderGrid(container) {
         if (!hasMoved) {
           const id = parseInt(card.dataset.id);
           const item = items.find(x => x.id === id);
-          if (item && !isLibraryEditor()) {
+          if (item && !isEditor()) {
             openPreviewModal(item);
             hasTriggered = true;  // Mark as triggered
           }
@@ -723,7 +673,7 @@ function renderGrid(container) {
       
       console.log('[lib-item] eventType:', e.type, 'hasTriggered:', hasTriggered, 'pressDuration:', pressDuration);
       
-      if (isLibraryEditor()) {
+      if (isEditor()) {
         openModal(item, pageContainer);
       } else {
         // Quick click: copy to clipboard (use decrypted content if available)
@@ -1184,29 +1134,6 @@ async function likeItem(itemId) {
 }
 
 // ── Library-specific edit mode (password-protected) ───
-function openPasswordModal(container) {
-  container.querySelector('#lib-password-input').value = '';
-  container.querySelector('#lib-password-error').style.display = 'none';
-  container.querySelector('#lib-password-modal').classList.add('show');
-  setTimeout(() => container.querySelector('#lib-password-input').focus(), 60);
-}
-
-function closePasswordModal(container) {
-  container.querySelector('#lib-password-modal').classList.remove('show');
-}
-
-function submitPassword(container) {
-  const input = container.querySelector('#lib-password-input').value;
-  if (input === LIBRARY_PASSWORD) {
-    isLibraryEditable = true;
-    updateLibraryUI(container);
-    closePasswordModal(container);
-    showToast('✅ 已解锁指令编辑');
-  } else {
-    container.querySelector('#lib-password-error').style.display = 'block';
-    container.querySelector('#lib-password-input').value = '';
-    container.querySelector('#lib-password-input').focus();
-  }
 }
 
 // ── Crypto utilities ────────────────────────────────
@@ -1305,40 +1232,12 @@ function updateSortButton(container) {
 }
 
 function updateLibraryUI(container) {
-  const unlockBtn = container.querySelector('#lib-unlock-btn');
   const addBtn = container.querySelector('#lib-add-btn');
-  
-  // Check if editable through EITHER global OR library-specific mode
-  const isEditable = isLibraryEditor();
-  
-  if (isEditable) {
-    if (isEditor()) {
-      // Global edit mode is active
-      unlockBtn.textContent = '🔓 全局编辑中';
-      unlockBtn.className = 'btn bp';
-      unlockBtn.disabled = true;  // Can't lock from here
-    } else {
-      // Library-specific edit mode
-      unlockBtn.textContent = '🔓 锁定指令编辑';
-      unlockBtn.className = 'btn bp';
-      unlockBtn.disabled = false;
-    }
-    addBtn.style.display = '';
-  } else {
-    unlockBtn.textContent = '🔒 解锁指令编辑';
-    unlockBtn.className = 'btn bn';
-    unlockBtn.disabled = false;
-    addBtn.style.display = 'none';
-  }
-  
+  addBtn.style.display = isEditor() ? '' : 'none';
   // Re-render grid to update edit buttons on tags
   renderTagList(container.querySelector('#lib-tag-list'));
 }
 
-// Check library edit permission (global OR library-specific)
-function isLibraryEditor() {
-  return isEditor() || isLibraryEditable;
-}
 
 // ── Privacy mode functions ────────────────────────
 async function unlockPrivateContent(container) {
