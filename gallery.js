@@ -126,7 +126,7 @@ function buildHTML() {
     <input id="gal-author" type="text" placeholder="作者名..." autocomplete="off" style="margin-bottom:12px"/>
 
     <label>标签</label>
-    <div id="gal-tag-picker"lib></div>
+    <div id="gal-tag-picker" style="margin-bottom:8px"></div>
     <div style="display:flex;gap:8px;margin-bottom:16px">
       <input id="gal-new-tag" type="text" placeholder="新增标签..." autocomplete="off"
         style="flex:1;padding:8px 12px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);font-size:13px"/>
@@ -430,21 +430,12 @@ function switchUploadMode(container, mode) {
 
 function renderTagPicker(container, selectedItemTags) {
   const picker = container.querySelector('#gal-tag-picker');
-  picker.innerHTML = tags.map(tag => {
-    const active = selectedItemTags.includes(tag) ? 'active' : '';
-    return `
-      <div class="lib-tag-item ${active}" data-tag="${escHtml(tag)}">
-        <span class="lib-tag-label">${escHtml(tag)}</span>
-      </div>`;
-  }).join('');
-
-  picker.querySelectorAll('.lib-tag-item').forEach(el => {
-    el.addEventListener('click', () => {
-      el.classList.toggle('active');
-    });
-  });
+  picker.innerHTML = tags.map(tag => `
+    <label style="display:inline-flex;align-items:center;gap:4px;margin:0 6px 6px 0;cursor:pointer;font-size:13px">
+      <input type="checkbox" value="${escHtml(tag)}" ${selectedItemTags.includes(tag) ? 'checked' : ''}/>
+      ${escHtml(tag)}
+    </label>`).join('');
 }
-
 
 function addNewTag(container) {
   const input = container.querySelector('#gal-new-tag');
@@ -461,8 +452,8 @@ async function saveItem(container) {
   const title = container.querySelector('#gal-title').value.trim();
   const description = container.querySelector('#gal-desc').value.trim();
   const author = container.querySelector('#gal-author').value.trim();
-  const selectedItemTags = Array.from(container.querySelectorAll('#gal-tag-picker .lib-tag-item.active')
-).map(el => el.dataset.tag);
+  const selectedItemTags = Array.from(container.querySelectorAll('#gal-tag-picker input[type="checkbox"]:checked'))
+    .map(cb => cb.value);
   const savingId = editItemId;
 
   closeModal(container);
