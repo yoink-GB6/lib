@@ -235,6 +235,23 @@ textarea{resize:vertical;min-height:80px;line-height:1.6}
 .gal-edit-overlay{position:absolute;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .18s;color:#fff;font-size:13px;font-weight:600;pointer-events:none}
 .gal-item:hover .gal-edit-overlay{opacity:1}
 
+/* Articles grid */
+.arc-grid{flex:1;overflow-y:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));grid-auto-rows:max-content;gap:16px;padding-bottom:20px;align-content:start}
+.arc-grid::-webkit-scrollbar{width:4px}
+.arc-grid::-webkit-scrollbar-thumb{background:var(--ibr);border-radius:3px}
+.arc-item{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:16px;cursor:pointer;transition:box-shadow .15s,border-color .15s}
+.arc-item:hover{box-shadow:0 4px 16px rgba(0,0,0,.35);border-color:rgba(124,131,247,.35)}
+.arc-item-editor:hover{border-color:var(--accent)}
+.arc-item-title{font-size:15px;font-weight:700;color:var(--text);margin-bottom:8px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.arc-item-preview{font-size:13px;color:#889;line-height:1.6;margin-bottom:10px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;white-space:pre-wrap;word-break:break-word}
+.arc-item-meta{display:flex;gap:10px;flex-wrap:wrap;font-size:11px;color:#667;padding-top:8px;border-top:1px solid rgba(255,255,255,.05)}
+/* Read modal */
+.arc-read-tl{max-width:720px;width:min(720px,95vw)}
+.arc-read-body{font-size:15px;line-height:1.9;color:#cdd;word-break:break-word;white-space:pre-wrap}
+.arc-para{margin-bottom:1em}
+
+#arc-expand{top:50%;right:0;transform:translateY(-50%)}
+
 </style>
 
 </head>
@@ -256,6 +273,7 @@ textarea{resize:vertical;min-height:80px;line-height:1.6}
     <div id="tab-nav">
       <button class="tab-btn active" data-tab="library">📋 指令集</button>
       <button class="tab-btn" data-tab="gallery">🖼 图库</button>
+      <button class="tab-btn" data-tab="articles">📝 文章</button>
     </div>
     <div id="sync-dot" title="同步状态"></div>
     <button id="lock-btn" onclick="showPwModal()">🔒 编辑</button>
@@ -285,6 +303,7 @@ import { showToast } from './ui.js';
 import { isEditor, tryUnlock, lock, onAuthChange } from './auth.js';
 import { mount as mountLibrary, unmount as unmountLibrary } from './library.js';
 import { mount as mountGallery, unmount as unmountGallery } from './gallery.js';
+import { mount as mountArticles, unmount as unmountArticles } from './articles.js';
 
 // ── Site entry gate ───────────────────────────────
 const ENTRY_KEY = 'site_unlocked';
@@ -387,6 +406,9 @@ async function switchTab(tab) {
   } else if (tab === 'gallery') {
     await mountGallery(root);
     unmountCurrent = unmountGallery;
+  } else if (tab === 'articles') {
+    await mountArticles(root);
+    unmountCurrent = unmountArticles;
   }
 }
 
