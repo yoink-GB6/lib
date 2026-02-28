@@ -1133,9 +1133,6 @@ async function likeItem(itemId) {
   }
 }
 
-// ── Library-specific edit mode (password-protected) ───
-}
-
 // ── Crypto utilities ────────────────────────────────
 async function deriveKey(password, salt) {
   const encoder = new TextEncoder();
