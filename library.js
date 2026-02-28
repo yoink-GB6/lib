@@ -124,7 +124,7 @@ function buildHTML() {
 <!-- Edit modal -->
 <div id="lib-modal" class="tl-modal-overlay">
   <div class="tl-modal" style="max-width:600px" onmousedown="event.stopPropagation()">
-    <h2 id="lib-modal-title">新建指令</h2>
+    <h2 id="lib-modal-title" style="color:var(--accent)">新建指令</h2>
     
     <label>内容</label>
     <textarea id="lib-content" rows="8" placeholder="输入指令内容..." style="margin-bottom:12px;font-family:inherit"></textarea>
@@ -881,12 +881,6 @@ async function saveItem(container) {
     } else {
       const { error } = await supaClient.from('general_library_items').insert(row);
       if (error) throw error;
-      // 同步复制一条到 library_items（只在新建时，后续独立）
-      try {
-        await supaClient.from('library_items').insert(row);
-      } catch(syncErr) {
-        console.warn('同步到 library_items 失败（不影响本地保存）:', syncErr);
-      }
       showToast('已创建');
     }
     

@@ -18,6 +18,13 @@ let editItemId = null;
 let realtimeCh = null;
 let pageContainer = null;
 
+// Lightbox zoom/pan state
+let lbScale = 1;
+let lbDragging = false;
+let lbDragStart = { x: 0, y: 0 };
+let lbTranslate = { x: 0, y: 0 };
+let lbLastTranslate = { x: 0, y: 0 };
+
 export async function mount(container) {
   pageContainer = container;
   container.innerHTML = buildHTML();
@@ -36,35 +43,27 @@ export function unmount() {
 function buildHTML() {
   return `
 <div class="lib-layout">
-  <!-- Main content area -->
   <div class="lib-main">
     <div class="gal-grid" id="gal-grid"></div>
   </div>
 
-  <!-- Floating expand button -->
   <button id="gal-expand" class="expand-btn-float" title="展开筛选">◀</button>
 
-  <!-- Right sidebar -->
   <div class="lib-panel" id="gal-panel">
     <div class="lib-panel-hdr" id="gal-panel-toggle">
       <span>🖼 搜索 & 筛选</span>
       <span id="gal-panel-chevron">▶</span>
     </div>
     <div class="lib-panel-body">
-      <!-- Sort + Add row -->
       <div style="display:flex;gap:6px;margin-bottom:14px">
         <button class="btn bn" id="gal-sort-btn" style="flex:1;font-size:12px">🕐 旧→新</button>
         <button class="btn bp" id="gal-add-btn" style="display:none;font-size:12px;padding:6px 12px">＋ 新建</button>
       </div>
-
-      <!-- Search -->
       <div style="margin-bottom:16px">
         <input id="gal-search-input" type="text" placeholder="搜索标题/描述..."
           autocomplete="off"
           style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);font-size:13px"/>
       </div>
-
-      <!-- Author filter -->
       <div style="margin-bottom:16px;position:relative">
         <input id="gal-author-input" type="text" placeholder="输入作者名筛选..."
           autocomplete="off"
@@ -73,8 +72,6 @@ function buildHTML() {
           style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;color:#889;cursor:pointer;font-size:16px;padding:4px;display:none"
           title="清除作者筛选">✕</button>
       </div>
-
-      <!-- Tag hint -->
       <div style="font-size:12px;color:#889;margin-bottom:12px;line-height:1.6">
         点击标签进行筛选。选中多个标签时，显示<b>同时包含</b>所有选中标签的图片。
       </div>
@@ -83,19 +80,17 @@ function buildHTML() {
   </div>
 </div>
 
-<!-- Upload/Edit modal -->
+<!-- Edit / New modal -->
 <div id="gal-modal" class="tl-modal-overlay">
   <div class="tl-modal" style="max-width:520px" onmousedown="event.stopPropagation()">
-    <h2 id="gal-modal-title">上传图片</h2>
+    <h2 id="gal-modal-title" style="color:var(--accent)">新建</h2>
 
-    <!-- Image preview -->
     <div id="gal-preview-wrap" style="margin-bottom:12px;text-align:center;display:none">
-      <img id="gal-preview-img" style="max-width:100%;max-height:240px;border-radius:8px;border:1px solid var(--border)"/>
+      <img id="gal-preview-img" style="max-width:100%;max-height:200px;border-radius:8px;border:1px solid var(--border)"/>
     </div>
 
-    <!-- Upload mode selector (new items only) -->
     <div id="gal-upload-mode" style="margin-bottom:14px">
-      <div style="display:flex;gap:8px;margin-bottom:12px">
+      <div style="display:flex;gap:8px;margin-bottom:10px">
         <button id="gal-mode-file" class="btn bp" style="flex:1;font-size:13px;display:flex;align-items:center;justify-content:center;gap:6px;padding:8px 0">
           <span style="font-size:16px">📁</span><span>上传文件</span>
         </button>
@@ -103,12 +98,10 @@ function buildHTML() {
           <span style="font-size:16px">🔗</span><span>图片链接</span>
         </button>
       </div>
-      <!-- File input -->
       <div id="gal-file-wrap" style="margin-bottom:4px">
         <input id="gal-file-input" type="file" accept="image/*"
           style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);font-size:13px;cursor:pointer"/>
       </div>
-      <!-- Link input -->
       <div id="gal-link-wrap" style="display:none;margin-bottom:4px">
         <input id="gal-link-input" type="url" placeholder="https://..."
           autocomplete="off"
@@ -120,7 +113,7 @@ function buildHTML() {
     <input id="gal-title" type="text" placeholder="图片标题..." autocomplete="off" style="margin-bottom:12px"/>
 
     <label>描述（可选）</label>
-    <textarea id="gal-desc" rows="3" placeholder="图片描述..." style="margin-bottom:12px;font-family:inherit"></textarea>
+    <textarea id="gal-desc" rows="3" placeholder="图片描述..." style="margin-bottom:12px;font-family:inherit;resize:vertical"></textarea>
 
     <label>作者</label>
     <input id="gal-author" type="text" placeholder="作者名..." autocomplete="off" style="margin-bottom:12px"/>
@@ -134,6 +127,7 @@ function buildHTML() {
     </div>
 
     <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn bd" id="gal-delete-btn" style="display:none;margin-right:auto">🗑 删除</button>
       <button class="btn bn" id="gal-cancel-btn">取消</button>
       <button class="btn bp" id="gal-save-btn">保存</button>
     </div>
@@ -141,29 +135,32 @@ function buildHTML() {
 </div>
 
 <!-- Lightbox -->
-<div id="gal-lightbox" class="tl-modal-overlay" style="background:rgba(0,0,0,0.85)">
-  <div style="position:relative;max-width:90vw;max-height:90vh;display:flex;flex-direction:column;align-items:center" onmousedown="event.stopPropagation()">
-    <img id="gal-lightbox-img" style="max-width:90vw;max-height:80vh;object-fit:contain;border-radius:8px"/>
-    <div id="gal-lightbox-info" style="margin-top:12px;color:#ccc;font-size:13px;text-align:center;max-width:600px"></div>
-    <div id="gal-lightbox-actions" style="display:flex;gap:8px;margin-top:10px"></div>
-    <button id="gal-lightbox-close" style="position:absolute;top:-16px;right:-16px;background:#333;border:none;color:#fff;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center">✕</button>
+<div id="gal-lightbox" class="tl-modal-overlay" style="background:rgba(0,0,0,0.92)">
+  <div id="gal-lb-wrap" style="position:relative;width:100%;height:100%;display:flex;align-items:center;justify-content:center;overflow:hidden">
+    <img id="gal-lightbox-img"
+      style="max-width:90vw;max-height:88vh;object-fit:contain;border-radius:6px;cursor:default;user-select:none;touch-action:none;transform-origin:center center"/>
+    <div id="gal-lightbox-info" style="position:absolute;bottom:18px;left:50%;transform:translateX(-50%);color:#ddd;font-size:13px;text-align:center;max-width:70vw;pointer-events:none;text-shadow:0 1px 4px #000a"></div>
+    <div style="position:absolute;bottom:18px;right:20px;color:#555;font-size:11px;pointer-events:none">滚轮 / 双指缩放</div>
+    <button id="gal-lightbox-close" style="position:absolute;top:16px;right:16px;background:rgba(0,0,0,.55);border:1px solid #555;color:#fff;width:34px;height:34px;border-radius:50%;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;z-index:2">✕</button>
+    <div style="position:absolute;top:16px;left:50%;transform:translateX(-50%);display:flex;gap:8px;z-index:2">
+      <button id="gal-lb-zout" style="background:rgba(0,0,0,.55);border:1px solid #555;color:#fff;width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:20px;display:flex;align-items:center;justify-content:center;line-height:1">−</button>
+      <button id="gal-lb-reset" style="background:rgba(0,0,0,.55);border:1px solid #555;color:#ccc;width:52px;height:32px;border-radius:8px;cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center">100%</button>
+      <button id="gal-lb-zin" style="background:rgba(0,0,0,.55);border:1px solid #555;color:#fff;width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:20px;display:flex;align-items:center;justify-content:center;line-height:1">＋</button>
+    </div>
   </div>
 </div>
 `;
 }
 
 function bindControls(container) {
-  // Sort
   container.querySelector('#gal-sort-btn').addEventListener('click', () => {
     sortBy = sortBy === 'asc' ? 'desc' : 'asc';
     updateSortButton(container);
     renderGrid(container);
   });
 
-  // Add/upload button
   container.querySelector('#gal-add-btn').addEventListener('click', () => openModal(null, container));
 
-  // Panel toggle
   function togglePanel() {
     const panel = container.querySelector('#gal-panel');
     const chevron = container.querySelector('#gal-panel-chevron');
@@ -175,13 +172,11 @@ function bindControls(container) {
   container.querySelector('#gal-panel-toggle')?.addEventListener('click', togglePanel);
   container.querySelector('#gal-expand')?.addEventListener('click', togglePanel);
 
-  // Search
   container.querySelector('#gal-search-input').addEventListener('input', e => {
     searchKeyword = e.target.value.toLowerCase();
     renderGrid(container);
   });
 
-  // Author filter
   const authorInput = container.querySelector('#gal-author-input');
   const authorClear = container.querySelector('#gal-author-clear');
   authorInput.addEventListener('input', e => {
@@ -190,43 +185,106 @@ function bindControls(container) {
     renderGrid(container);
   });
   authorClear.addEventListener('click', () => {
-    selectedAuthor = '';
-    authorInput.value = '';
+    selectedAuthor = ''; authorInput.value = '';
     authorClear.style.display = 'none';
     renderGrid(container);
   });
 
-  // File input preview
   container.querySelector('#gal-file-input').addEventListener('change', e => {
     const file = e.target.files[0];
     if (!file) return;
-    const url = URL.createObjectURL(file);
     const previewWrap = container.querySelector('#gal-preview-wrap');
     const previewImg = container.querySelector('#gal-preview-img');
-    previewImg.src = url;
+    previewImg.src = URL.createObjectURL(file);
     previewWrap.style.display = '';
   });
 
-  // Upload mode toggle inside modal
   container.querySelector('#gal-mode-file')?.addEventListener('click', () => switchUploadMode(container, 'file'));
   container.querySelector('#gal-mode-link')?.addEventListener('click', () => switchUploadMode(container, 'link'));
 
-  // Modal controls
   container.querySelector('#gal-cancel-btn').addEventListener('click', () => closeModal(container));
   container.querySelector('#gal-modal').addEventListener('mousedown', e => {
     if (e.target === container.querySelector('#gal-modal')) closeModal(container);
   });
   container.querySelector('#gal-save-btn').addEventListener('click', () => saveItem(container));
+  container.querySelector('#gal-delete-btn').addEventListener('click', () => deleteFromModal(container));
   container.querySelector('#gal-add-tag-btn').addEventListener('click', () => addNewTag(container));
   container.querySelector('#gal-new-tag').addEventListener('keydown', e => {
     if (e.key === 'Enter') { e.preventDefault(); addNewTag(container); }
   });
 
-  // Lightbox close
+  // Lightbox
   container.querySelector('#gal-lightbox-close').addEventListener('click', () => closeLightbox(container));
   container.querySelector('#gal-lightbox').addEventListener('mousedown', e => {
-    if (e.target === container.querySelector('#gal-lightbox')) closeLightbox(container);
+    if (e.target === container.querySelector('#gal-lightbox') ||
+        e.target === container.querySelector('#gal-lb-wrap')) closeLightbox(container);
   });
+  container.querySelector('#gal-lb-zin').addEventListener('click', () => setLbScale(container, lbScale * 1.3));
+  container.querySelector('#gal-lb-zout').addEventListener('click', () => setLbScale(container, lbScale / 1.3));
+  container.querySelector('#gal-lb-reset').addEventListener('click', () => resetLbTransform(container));
+
+  container.querySelector('#gal-lightbox').addEventListener('wheel', e => {
+    e.preventDefault();
+    setLbScale(container, lbScale * (e.deltaY < 0 ? 1.15 : 1 / 1.15));
+  }, { passive: false });
+
+  const img = container.querySelector('#gal-lightbox-img');
+  img.addEventListener('mousedown', e => {
+    if (lbScale <= 1) return;
+    lbDragging = true;
+    lbDragStart = { x: e.clientX - lbLastTranslate.x, y: e.clientY - lbLastTranslate.y };
+    img.style.cursor = 'grabbing';
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove', e => {
+    if (!lbDragging) return;
+    lbTranslate = { x: e.clientX - lbDragStart.x, y: e.clientY - lbDragStart.y };
+    applyLbTransform(container);
+  });
+  document.addEventListener('mouseup', () => {
+    if (!lbDragging) return;
+    lbDragging = false;
+    lbLastTranslate = { ...lbTranslate };
+    img.style.cursor = lbScale > 1 ? 'grab' : 'default';
+  });
+
+  let lastTouchDist = 0;
+  img.addEventListener('touchstart', e => {
+    if (e.touches.length === 2) {
+      lastTouchDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+    }
+  }, { passive: true });
+  img.addEventListener('touchmove', e => {
+    if (e.touches.length !== 2) return;
+    e.preventDefault();
+    const dist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+    if (lastTouchDist) setLbScale(container, lbScale * (dist / lastTouchDist));
+    lastTouchDist = dist;
+  }, { passive: false });
+}
+
+function setLbScale(container, scale) {
+  lbScale = Math.min(Math.max(scale, 0.5), 5);
+  if (lbScale <= 1) { lbTranslate = { x: 0, y: 0 }; lbLastTranslate = { x: 0, y: 0 }; }
+  const img = container.querySelector('#gal-lightbox-img');
+  if (img) img.style.cursor = lbScale > 1 ? 'grab' : 'default';
+  const btn = container.querySelector('#gal-lb-reset');
+  if (btn) btn.textContent = Math.round(lbScale * 100) + '%';
+  applyLbTransform(container);
+}
+
+function applyLbTransform(container) {
+  const img = container.querySelector('#gal-lightbox-img');
+  if (img) img.style.transform = `scale(${lbScale}) translate(${lbTranslate.x / lbScale}px, ${lbTranslate.y / lbScale}px)`;
+}
+
+function resetLbTransform(container) {
+  lbScale = 1; lbTranslate = { x: 0, y: 0 }; lbLastTranslate = { x: 0, y: 0 };
+  applyLbTransform(container);
+  const btn = container.querySelector('#gal-lb-reset');
+  if (btn) btn.textContent = '100%';
+  const img = container.querySelector('#gal-lightbox-img');
+  if (img) img.style.cursor = 'default';
 }
 
 async function fetchAll() {
@@ -235,16 +293,10 @@ async function fetchAll() {
     const { data, error } = await supaClient.from(TABLE).select('*');
     if (error) throw error;
     items = data.map(r => ({
-      id: r.id,
-      title: r.title || '',
-      description: r.description || '',
-      author: r.author || '',
-      tags: JSON.parse(r.tags_json || '[]'),
-      imageUrl: r.image_url,
-      storagePath: r.storage_path,
-      createdAt: r.created_at,
+      id: r.id, title: r.title || '', description: r.description || '',
+      author: r.author || '', tags: JSON.parse(r.tags_json || '[]'),
+      imageUrl: r.image_url, storagePath: r.storage_path, createdAt: r.created_at,
     }));
-    // Collect all tags
     const tagSet = new Set();
     items.forEach(item => item.tags.forEach(t => tagSet.add(t)));
     tags = Array.from(tagSet).sort();
@@ -259,40 +311,45 @@ async function fetchAll() {
 function sortItems() {
   items.sort((a, b) => sortBy === 'asc'
     ? new Date(a.createdAt) - new Date(b.createdAt)
-    : new Date(b.createdAt) - new Date(a.createdAt)
-  );
+    : new Date(b.createdAt) - new Date(a.createdAt));
 }
 
 function renderTagList(tagListEl) {
   if (!tagListEl) return;
-  if (!tags.length) { tagListEl.innerHTML = '<div style="color:#556;font-size:12px">暂无标签</div>'; return; }
+  selectedTags = selectedTags.filter(t => tags.includes(t));
+  if (!tags.length) {
+    tagListEl.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:8px 0">暂无标签</div>';
+    return;
+  }
+  const editable = isEditor();
   tagListEl.innerHTML = tags.map(tag => {
-    const active = selectedTags.includes(tag) ? 'active' : '';
-    const actions = isEditor() ? `
-      <span class="lib-tag-action" data-action="rename" data-tag="${escHtml(tag)}" title="重命名">✏️</span>
-      <span class="lib-tag-action" data-action="delete" data-tag="${escHtml(tag)}" title="删除">🗑</span>` : '';
-    return `<div class="lib-tag-item ${active}" data-tag="${escHtml(tag)}">
-      <span class="lib-tag-label">${escHtml(tag)}</span>
-      ${actions}
+    const selected = selectedTags.includes(tag);
+    const count = items.filter(i => i.tags.includes(tag)).length;
+    const actionBtns = editable
+      ? `<div class="lib-tag-actions">
+          <button class="lib-tag-action-btn lib-tag-edit" data-tag="${escHtml(tag)}" title="重命名">✏️</button>
+          <button class="lib-tag-action-btn lib-tag-delete" data-tag="${escHtml(tag)}" title="删除">🗑️</button>
+         </div>` : '';
+    return `<div class="lib-tag-filter ${selected ? 'selected' : ''}" data-tag="${escHtml(tag)}">
+      <div class="lib-tag-main">
+        <span class="lib-tag-name">${escHtml(tag)}</span>
+        <span class="lib-tag-count">(${count})</span>
+      </div>
+      ${actionBtns}
     </div>`;
   }).join('');
 
-  tagListEl.querySelectorAll('.lib-tag-item').forEach(el => {
-    el.querySelector('.lib-tag-label')?.addEventListener('click', () => {
+  tagListEl.querySelectorAll('.lib-tag-filter').forEach(el => {
+    el.querySelector('.lib-tag-main')?.addEventListener('click', e => {
+      e.stopPropagation();
       const tag = el.dataset.tag;
       if (selectedTags.includes(tag)) selectedTags = selectedTags.filter(t => t !== tag);
       else selectedTags.push(tag);
       renderTagList(tagListEl);
       renderGrid(pageContainer);
     });
-    el.querySelector('[data-action="rename"]')?.addEventListener('click', e => {
-      e.stopPropagation();
-      renameTag(el.dataset.tag, tagListEl);
-    });
-    el.querySelector('[data-action="delete"]')?.addEventListener('click', e => {
-      e.stopPropagation();
-      deleteTag(el.dataset.tag, tagListEl);
-    });
+    el.querySelector('.lib-tag-edit')?.addEventListener('click', e => { e.stopPropagation(); renameTag(el.dataset.tag, tagListEl); });
+    el.querySelector('.lib-tag-delete')?.addEventListener('click', e => { e.stopPropagation(); deleteTag(el.dataset.tag, tagListEl); });
   });
 }
 
@@ -303,101 +360,83 @@ function renderGrid(container) {
 
   let filtered = [...items];
   if (searchKeyword) filtered = filtered.filter(item =>
-    item.title.toLowerCase().includes(searchKeyword) ||
-    item.description.toLowerCase().includes(searchKeyword)
-  );
+    item.title.toLowerCase().includes(searchKeyword) || item.description.toLowerCase().includes(searchKeyword));
   if (selectedAuthor) filtered = filtered.filter(item =>
-    item.author.toLowerCase().includes(selectedAuthor.toLowerCase())
-  );
+    item.author.toLowerCase().includes(selectedAuthor.toLowerCase()));
   if (selectedTags.length) filtered = filtered.filter(item =>
-    selectedTags.every(t => item.tags.includes(t))
-  );
+    selectedTags.every(t => item.tags.includes(t)));
 
   if (!filtered.length) {
     grid.innerHTML = `<div style="color:#556;font-size:14px;grid-column:1/-1;padding:40px;text-align:center">暂无图片</div>`;
     return;
   }
 
+  const editor = isEditor();
   grid.innerHTML = filtered.map(item => {
     const tagsHtml = item.tags.map(t => `<span class="lib-item-tag">${escHtml(t)}</span>`).join('');
     const titleHtml = item.title ? `<div class="gal-item-title">${escHtml(item.title)}</div>` : '';
-    const authorHtml = item.author ? `<div class="lib-item-author">by ${escHtml(item.author)}</div>` : '';
+    const editOverlay = editor
+      ? `<div class="gal-edit-overlay"><span>✏️ 编辑</span></div>` : '';
     return `<div class="gal-item" data-id="${item.id}">
       <div class="gal-item-img-wrap">
         <img class="gal-item-img" src="${escHtml(item.imageUrl)}" loading="lazy" alt="${escHtml(item.title || '')}"/>
+        ${editOverlay}
       </div>
       ${titleHtml}
-      ${tagsHtml ? `<div class="lib-item-tags" style="padding:0 8px 4px">${tagsHtml}</div>` : ''}
-      ${authorHtml ? `<div style="padding:0 8px 8px">${authorHtml}</div>` : ''}
+      ${tagsHtml ? `<div class="lib-item-tags" style="padding:0 8px 6px">${tagsHtml}</div>` : ''}
     </div>`;
   }).join('');
 
   grid.querySelectorAll('.gal-item').forEach(el => {
     el.addEventListener('click', () => {
       const item = items.find(i => i.id == el.dataset.id);
-      if (item) openLightbox(item, container);
+      if (!item) return;
+      if (isEditor()) openModal(item, container);
+      else openLightbox(item, container);
     });
   });
 }
 
 function openLightbox(item, container) {
-  const lb = container.querySelector('#gal-lightbox');
+  resetLbTransform(container);
   container.querySelector('#gal-lightbox-img').src = item.imageUrl;
   const info = [];
   if (item.title) info.push(`<b>${escHtml(item.title)}</b>`);
   if (item.description) info.push(escHtml(item.description));
-  if (item.author) info.push(`by ${escHtml(item.author)}`);
   container.querySelector('#gal-lightbox-info').innerHTML = info.join('<br>');
-
-  const actions = container.querySelector('#gal-lightbox-actions');
-  actions.innerHTML = `<a class="btn bn" href="${escHtml(item.imageUrl)}" download target="_blank" style="font-size:12px">⬇ 下载</a>`;
-  if (isEditor()) {
-    actions.innerHTML += `
-      <button class="btn bn" id="lb-edit-btn" style="font-size:12px">✏️ 编辑</button>
-      <button class="btn bd" id="lb-del-btn" style="font-size:12px">🗑 删除</button>`;
-    actions.querySelector('#lb-edit-btn')?.addEventListener('click', () => {
-      closeLightbox(container);
-      openModal(item, container);
-    });
-    actions.querySelector('#lb-del-btn')?.addEventListener('click', async () => {
-      closeLightbox(container);
-      await deleteItem(item.id, item.storagePath, container);
-    });
-  }
-  lb.classList.add('show');
+  container.querySelector('#gal-lightbox').classList.add('show');
 }
 
 function closeLightbox(container) {
   container.querySelector('#gal-lightbox').classList.remove('show');
+  resetLbTransform(container);
 }
 
 function openModal(item, container) {
   editItemId = item ? item.id : null;
   const isEdit = !!item;
-  container.querySelector('#gal-modal-title').textContent = isEdit ? '编辑图片信息' : '新建';
+  container.querySelector('#gal-modal-title').textContent = isEdit ? '编辑图片' : '新建';
   container.querySelector('#gal-title').value = item?.title || '';
   container.querySelector('#gal-desc').value = item?.description || '';
   container.querySelector('#gal-author').value = item?.author || '';
 
-  // Show/hide upload mode selector
   const uploadMode = container.querySelector('#gal-upload-mode');
   if (uploadMode) uploadMode.style.display = isEdit ? 'none' : '';
-
-  // Default to file mode for new items
   if (!isEdit) switchUploadMode(container, 'file');
 
-  // Preview
+  const delBtn = container.querySelector('#gal-delete-btn');
+  if (delBtn) delBtn.style.display = isEdit ? '' : 'none';
+
   const previewWrap = container.querySelector('#gal-preview-wrap');
   const previewImg = container.querySelector('#gal-preview-img');
   if (item) {
     previewImg.src = item.imageUrl;
     previewWrap.style.display = '';
   } else {
-    previewImg.src = '';
-    previewWrap.style.display = 'none';
+    previewImg.src = ''; previewWrap.style.display = 'none';
     container.querySelector('#gal-file-input').value = '';
-    const linkInput = container.querySelector('#gal-link-input');
-    if (linkInput) linkInput.value = '';
+    const li = container.querySelector('#gal-link-input');
+    if (li) li.value = '';
   }
 
   renderTagPicker(container, item?.tags || []);
@@ -411,20 +450,16 @@ function closeModal(container) {
 
 function switchUploadMode(container, mode) {
   container.querySelector('#gal-modal').dataset.mode = mode;
-  const fileWrap = container.querySelector('#gal-file-wrap');
-  const linkWrap = container.querySelector('#gal-link-wrap');
-  const btnFile = container.querySelector('#gal-mode-file');
-  const btnLink = container.querySelector('#gal-mode-link');
+  const fw = container.querySelector('#gal-file-wrap');
+  const lw = container.querySelector('#gal-link-wrap');
+  const bf = container.querySelector('#gal-mode-file');
+  const bl = container.querySelector('#gal-mode-link');
   if (mode === 'file') {
-    fileWrap.style.display = '';
-    linkWrap.style.display = 'none';
-    btnFile.className = 'btn bp';
-    btnLink.className = 'btn bn';
+    fw.style.display = ''; lw.style.display = 'none';
+    bf.className = 'btn bp'; bl.className = 'btn bn';
   } else {
-    fileWrap.style.display = 'none';
-    linkWrap.style.display = '';
-    btnFile.className = 'btn bn';
-    btnLink.className = 'btn bp';
+    fw.style.display = 'none'; lw.style.display = '';
+    bf.className = 'btn bn'; bl.className = 'btn bp';
   }
 }
 
@@ -452,28 +487,20 @@ async function saveItem(container) {
   const title = container.querySelector('#gal-title').value.trim();
   const description = container.querySelector('#gal-desc').value.trim();
   const author = container.querySelector('#gal-author').value.trim();
-  const selectedItemTags = Array.from(container.querySelectorAll('#gal-tag-picker input[type="checkbox"]:checked'))
-    .map(cb => cb.value);
+  const selectedItemTags = Array.from(container.querySelectorAll('#gal-tag-picker input[type="checkbox"]:checked')).map(cb => cb.value);
   const savingId = editItemId;
-
   closeModal(container);
   setSyncStatus('syncing');
-
   try {
     if (savingId) {
-      // Edit: only update metadata, not image
       const { error } = await supaClient.from(TABLE).update({
-        title, description,
-        author: author || 'unknown',
-        tags_json: JSON.stringify(selectedItemTags),
+        title, description, author: author || 'unknown', tags_json: JSON.stringify(selectedItemTags),
       }).eq('id', savingId);
       if (error) throw error;
       showToast('已更新');
     } else {
-      // New: upload file or use link
       const mode = container.querySelector('#gal-modal').dataset.mode || 'file';
       let imageUrl = '', storagePath = '';
-
       if (mode === 'link') {
         imageUrl = container.querySelector('#gal-link-input').value.trim();
         if (!imageUrl) { showToast('请输入图片链接'); setSyncStatus('ok'); return; }
@@ -482,28 +509,29 @@ async function saveItem(container) {
         if (!file) { showToast('请选择图片文件'); setSyncStatus('ok'); return; }
         const ext = file.name.split('.').pop();
         storagePath = `${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
-        const { error: upErr } = await supaClient.storage.from(BUCKET).upload(storagePath, file, {
-          cacheControl: '3600', upsert: false
-        });
+        const { error: upErr } = await supaClient.storage.from(BUCKET).upload(storagePath, file, { cacheControl: '3600', upsert: false });
         if (upErr) throw upErr;
         const { data: urlData } = supaClient.storage.from(BUCKET).getPublicUrl(storagePath);
         imageUrl = urlData.publicUrl;
       }
-
       const { error } = await supaClient.from(TABLE).insert({
-        title, description,
-        author: author || 'unknown',
-        tags_json: JSON.stringify(selectedItemTags),
-        image_url: imageUrl,
-        storage_path: storagePath,
+        title, description, author: author || 'unknown',
+        tags_json: JSON.stringify(selectedItemTags), image_url: imageUrl, storage_path: storagePath,
       });
       if (error) throw error;
       showToast(mode === 'link' ? '已添加' : '已上传');
     }
-
     await fetchAll();
     setSyncStatus('ok');
   } catch(e) { dbError('保存图片', e); }
+}
+
+async function deleteFromModal(container) {
+  const id = editItemId;
+  const item = items.find(i => i.id == id);
+  if (!item) return;
+  closeModal(container);
+  await deleteItem(id, item.storagePath, container);
 }
 
 async function deleteItem(id, storagePath, container) {
@@ -511,9 +539,7 @@ async function deleteItem(id, storagePath, container) {
   if (!ok) return;
   setSyncStatus('syncing');
   try {
-    if (storagePath) {
-      await supaClient.storage.from(BUCKET).remove([storagePath]);
-    }
+    if (storagePath) await supaClient.storage.from(BUCKET).remove([storagePath]);
     const { error } = await supaClient.from(TABLE).delete().eq('id', id);
     if (error) throw error;
     showToast('已删除');
@@ -533,11 +559,8 @@ async function renameTag(oldTag, tagListEl) {
   if (!newTag || newTag === oldTag) return;
   setSyncStatus('syncing');
   try {
-    const toUpdate = items.filter(item => item.tags.includes(oldTag));
-    for (const item of toUpdate) {
-      const newTags = item.tags.map(t => t === oldTag ? newTag : t);
-      await supaClient.from(TABLE).update({ tags_json: JSON.stringify(newTags) }).eq('id', item.id);
-    }
+    for (const item of items.filter(i => i.tags.includes(oldTag)))
+      await supaClient.from(TABLE).update({ tags_json: JSON.stringify(item.tags.map(t => t === oldTag ? newTag : t)) }).eq('id', item.id);
     await fetchAll();
     setSyncStatus('ok');
   } catch(e) { dbError('重命名标签', e); }
@@ -548,11 +571,8 @@ async function deleteTag(tag, tagListEl) {
   if (!ok) return;
   setSyncStatus('syncing');
   try {
-    const toUpdate = items.filter(item => item.tags.includes(tag));
-    for (const item of toUpdate) {
-      const newTags = item.tags.filter(t => t !== tag);
-      await supaClient.from(TABLE).update({ tags_json: JSON.stringify(newTags) }).eq('id', item.id);
-    }
+    for (const item of items.filter(i => i.tags.includes(tag)))
+      await supaClient.from(TABLE).update({ tags_json: JSON.stringify(item.tags.filter(t => t !== tag)) }).eq('id', item.id);
     selectedTags = selectedTags.filter(t => t !== tag);
     await fetchAll();
     setSyncStatus('ok');
@@ -563,10 +583,10 @@ function updateSortButton(container) {
   const btn = container.querySelector('#gal-sort-btn');
   if (!btn) return;
   btn.textContent = sortBy === 'asc' ? '🕐 旧→新' : '🕐 新→旧';
-  btn.title = sortBy === 'asc' ? '当前：旧→新，点击切换' : '当前：新→旧，点击切换';
 }
 
 function updateGalleryUI(container) {
   const addBtn = container.querySelector('#gal-add-btn');
   if (addBtn) addBtn.style.display = isEditor() ? '' : 'none';
+  renderGrid(container);
 }

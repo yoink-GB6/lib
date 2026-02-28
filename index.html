@@ -4,13 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>DAMIDAMIDAMIO~</title>
+<title>指令集</title>
 
 <!-- ★ 填入你的 Supabase 配置 ★ -->
 <script>
   window.SUPABASE_URL  = 'https://hrgottdtlnihablruxtr.supabase.co';
   window.SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhyZ290dGR0bG5paGFibHJ1eHRyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEzMTcxOTAsImV4cCI6MjA4Njg5MzE5MH0.6Ng0E96W8VLnATqWgc_o7xVKCrzlewn0J-ba2ChpcE4';
-  window.EDIT_PASSWORD = 'yoinkpxz'; /* ← 改成你想要的密码 */
+  window.EDIT_PASSWORD = 'your_password_here'; /* ← 改成你想要的密码 */
 </script>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
@@ -99,7 +99,9 @@ textarea{resize:vertical;min-height:80px;line-height:1.6}
 .tl-modal{
   background:var(--panel);border:1px solid var(--border);border-radius:14px;
   padding:28px;width:min(520px,92vw);max-height:85vh;overflow-y:auto;
+  scrollbar-width:none;
 }
+.tl-modal::-webkit-scrollbar{display:none}
 .tl-modal h2{font-size:16px;font-weight:700;margin-bottom:18px}
 .tl-modal label{font-size:12px;color:#888;display:block;margin-bottom:4px}
 
@@ -209,7 +211,7 @@ textarea{resize:vertical;min-height:80px;line-height:1.6}
 .tab-btn.active{background:rgba(124,131,247,.18);color:var(--accent)}
 
 /* Gallery grid */
-.gal-grid{flex:1;overflow-y:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;padding-bottom:20px;align-items:start}
+.gal-grid{flex:1;overflow-y:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:16px;padding-bottom:20px;align-content:start;align-items:start}
 .gal-grid::-webkit-scrollbar{width:4px}
 .gal-grid::-webkit-scrollbar-thumb{background:var(--ibr);border-radius:3px}
 .gal-item{background:var(--panel);border:1px solid var(--border);border-radius:10px;overflow:hidden;cursor:pointer;transition:transform .15s,box-shadow .15s}
@@ -218,6 +220,8 @@ textarea{resize:vertical;min-height:80px;line-height:1.6}
 .gal-item-img{width:100%;height:100%;object-fit:cover;transition:transform .2s}
 .gal-item:hover .gal-item-img{transform:scale(1.04)}
 .gal-item-title{padding:8px 8px 4px;font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gal-edit-overlay{position:absolute;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .18s;color:#fff;font-size:13px;font-weight:600;pointer-events:none}
+.gal-item:hover .gal-edit-overlay{opacity:1}
 
 </style>
 
