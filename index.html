@@ -211,7 +211,7 @@ textarea{resize:vertical;min-height:80px;line-height:1.6}
 .tab-btn.active{background:rgba(124,131,247,.18);color:var(--accent)}
 
 /* Gallery grid */
-.gal-grid{flex:1;overflow-y:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:16px;padding-bottom:20px;align-content:start;align-items:start}
+.gal-grid{flex:1;overflow-y:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));grid-auto-rows:max-content;gap:16px;padding-bottom:20px;align-content:start}
 .gal-grid::-webkit-scrollbar{width:4px}
 .gal-grid::-webkit-scrollbar-thumb{background:var(--ibr);border-radius:3px}
 .gal-item{background:var(--panel);border:1px solid var(--border);border-radius:10px;overflow:hidden;cursor:pointer;transition:box-shadow .15s;position:relative}
