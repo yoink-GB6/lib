@@ -51,7 +51,6 @@ function buildHTML() {
   <!-- Main content area -->
   <div class="lib-main">
     <div style="display:flex;gap:8px;align-items:center;padding-bottom:16px;flex-shrink:0">
-      <button class="btn bn" id="lib-sort-btn" title="切换排序方式">👍 点赞排序</button>
       <button class="btn bp" id="lib-add-btn" style="display:none">＋ 新建</button>
     </div>
     <div class="lib-grid" id="lib-grid"></div>
@@ -64,9 +63,13 @@ function buildHTML() {
   <div class="lib-panel">
     <div class="lib-panel-hdr" id="lib-panel-toggle">
       <span>🔍 搜索 & 筛选</span>
-      <span id="lib-panel-chevron">◀</span>
+      <span id="lib-panel-chevron">▶</span>
     </div>
     <div class="lib-panel-body">
+      <!-- Sort -->
+      <div style="margin-bottom:14px">
+        <button class="btn bn" id="lib-sort-btn" style="width:100%;font-size:12px" title="切换排序方式">👍 点赞排序</button>
+      </div>
       <!-- Privacy unlock -->
       <div style="margin-bottom:16px">
         <div style="font-size:12px;color:#889;margin-bottom:8px">🔒 隐私内容解锁</div>
@@ -328,7 +331,7 @@ function bindControls(container) {
     const chevron = container.querySelector('#lib-panel-chevron');
     const expandBtn = container.querySelector('#lib-expand');
     const collapsed = panel.classList.toggle('collapsed');
-    chevron.textContent = collapsed ? '▶' : '◀';
+    chevron.textContent = collapsed ? '◀' : '▶';
     if (expandBtn) expandBtn.classList.toggle('show', collapsed);
   }
   container.querySelector('#lib-panel-toggle')?.addEventListener('click', toggleLibPanel);
@@ -932,6 +935,12 @@ async function saveItem(container) {
     } else {
       const { error } = await supaClient.from('general_library_items').insert(row);
       if (error) throw error;
+      // 同步复制一条到 library_items（只在新建时，后续独立）
+      try {
+        await supaClient.from('library_items').insert(row);
+      } catch(syncErr) {
+        console.warn('同步到 library_items 失败（不影响本地保存）:', syncErr);
+      }
       showToast('已创建');
     }
     
