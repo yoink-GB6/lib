@@ -39,7 +39,6 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
   background:var(--panel);border-bottom:1px solid var(--border);
   flex-shrink:0;z-index:100;
 }
-#topbar-title{font-size:15px;font-weight:700;color:var(--accent);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #sync-dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex-shrink:0;transition:background .3s}
 #sync-dot.syncing{background:var(--amber);animation:pulse .8s infinite}
 #sync-dot.ok{background:var(--green)}
@@ -118,6 +117,7 @@ textarea{resize:vertical;min-height:80px;line-height:1.6}
 .expand-btn-float.show{opacity:1;pointer-events:auto;}
 .expand-btn-float:hover{background:var(--accent);color:#fff;transform:scale(1.1)}
 #lib-expand{top:50%;right:0;transform:translateY(-50%)}
+#gal-expand{top:8px;left:8px;border-radius:0 8px 8px 0;border:1px solid var(--border);border-left:none;width:26px;height:36px}
 
 /* ── Toast ── */
 .toast-item{
@@ -203,7 +203,7 @@ textarea{resize:vertical;min-height:80px;line-height:1.6}
 .lib-tag-checkbox input[type="checkbox"]{margin:0;cursor:pointer}
 
 /* Tab nav */
-#tab-nav{display:flex;gap:4px;flex:1;justify-content:center}
+#tab-nav{display:flex;gap:4px;margin-right:auto}
 .tab-btn{background:none;border:none;color:var(--muted);cursor:pointer;padding:6px 16px;border-radius:6px;font-size:13px;font-weight:600;transition:all .15s}
 .tab-btn:hover{background:rgba(124,131,247,.1);color:var(--text)}
 .tab-btn.active{background:rgba(124,131,247,.18);color:var(--accent)}
@@ -227,7 +227,6 @@ textarea{resize:vertical;min-height:80px;line-height:1.6}
 <div id="app">
   <!-- Topbar -->
   <div id="topbar">
-    <div id="topbar-title">📋 指令集</div>
     <div id="tab-nav">
       <button class="tab-btn active" data-tab="library">📋 指令集</button>
       <button class="tab-btn" data-tab="gallery">🖼 图库</button>
