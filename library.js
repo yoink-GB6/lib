@@ -10,11 +10,10 @@ let tags = [];            // All available tags
 let selectedTags = [];    // Currently selected tags for filtering
 let searchKeyword = '';   // Search keyword for content filtering
 let selectedAuthor = '';  // Selected author for exact match filtering
-let sortBy = 'likes';         // Sorting method: 'likes' or 'created'
+let sortBy = 'asc';           // 'asc' = 旧→新, 'desc' = 新→旧
 let editItemId = null;
 let realtimeCh = null;
 let pageContainer = null; // Store container reference for use in event handlers
-let likedItems = new Set(); // Track liked items in current session (resets on page refresh)
 let unlockedKeys = new Set(); // Track unlocked privacy keys (resets on page refresh)
 
 
@@ -66,7 +65,7 @@ function buildHTML() {
     <div class="lib-panel-body">
       <!-- Sort + Add -->
       <div style="display:flex;gap:6px;margin-bottom:14px">
-        <button class="btn bn" id="lib-sort-btn" style="flex:1;font-size:12px" title="切换排序方式">👍 点赞排序</button>
+        <button class="btn bn" id="lib-sort-btn" style="flex:1;font-size:12px" title="切换排序方式">🕐 旧→新</button>
         <button class="btn bp" id="lib-add-btn" style="display:none;font-size:12px">＋ 新建</button>
       </div>
       <!-- Privacy unlock -->
@@ -318,7 +317,7 @@ function bindControls(container) {
 
   // Sort button
   container.querySelector('#lib-sort-btn').addEventListener('click', () => {
-    sortBy = sortBy === 'likes' ? 'created' : 'likes';
+    sortBy = sortBy === 'asc' ? 'desc' : 'asc';
     updateSortButton(container);
     renderGrid(container.querySelector('.lib-layout'));
   });
@@ -358,7 +357,6 @@ async function fetchAll() {
         content: r.content || '',
         author: r.author || '',
         tags: r.tags_json ? JSON.parse(r.tags_json) : [],
-        likes: r.likes || 0,
         createdAt: r.created_at,
         updatedAt: r.updated_at,
         privacyLevel: privacyLevel,
@@ -559,22 +557,11 @@ function renderGrid(container) {
     const preview = displayContent.length > 150 ? displayContent.slice(0, 150) + '...' : displayContent;
     const tagsHtml = item.tags.map(tag => `<span class="lib-item-tag">${escHtml(tag)}</span>`).join('');
     const authorHtml = item.author ? `<div class="lib-item-author">by ${escHtml(item.author)}</div>` : '';
-    const likes = item.likes || 0;
-    const isLiked = likedItems.has(item.id);
-    const likedClass = isLiked ? 'liked' : '';
-    const likeIcon = isLiked ? '❤️' : '👍';
-    const likeTitle = isLiked ? '取消点赞' : '点赞';
     
     return `<div class="lib-item" data-id="${item.id}">
       <div class="lib-item-content">${escHtml(preview)}</div>
       ${tagsHtml ? `<div class="lib-item-tags">${tagsHtml}</div>` : ''}
-      <div class="lib-item-footer">
-        ${authorHtml}
-        <div class="lib-item-like ${likedClass}" data-id="${item.id}" title="${likeTitle}">
-          <span class="lib-like-btn">${likeIcon}</span>
-          <span class="lib-like-count">${likes}</span>
-        </div>
-      </div>
+      ${authorHtml ? `<div class="lib-item-footer">${authorHtml}</div>` : ''}
     </div>`;
   }).join('');
   
@@ -702,28 +689,6 @@ function renderGrid(container) {
       handleInteraction(e);
     });
     card.addEventListener('touchcancel', cancelPress);
-  });
-  
-  // Bind like areas (prevent event bubbling to card)
-  grid.querySelectorAll('.lib-item-like').forEach(likeArea => {
-    const handleLike = async (e) => {
-      e.stopPropagation();
-      e.preventDefault();
-      const id = parseInt(likeArea.dataset.id);
-      await likeItem(id);
-    };
-    
-    // Desktop
-    likeArea.addEventListener('mousedown', (e) => e.stopPropagation());
-    likeArea.addEventListener('mousemove', (e) => e.stopPropagation());
-    likeArea.addEventListener('click', handleLike);
-    
-    // Mobile - use touchend instead of click for better response
-    likeArea.addEventListener('touchstart', (e) => {
-      e.stopPropagation();
-    });
-    likeArea.addEventListener('touchmove', (e) => e.stopPropagation());
-    likeArea.addEventListener('touchend', handleLike);
   });
 }
 
@@ -1052,91 +1017,6 @@ async function deleteTag(tag, tagListEl) {
   }
 }
 
-// ── Like functionality (session-based, toggle support) ─────
-async function likeItem(itemId) {
-  if (!itemId) return;
-  
-  const item = items.find(x => x.id === itemId);
-  if (!item) return;
-  
-  const isCurrentlyLiked = likedItems.has(itemId);
-  const isLiking = !isCurrentlyLiked;  // Toggle
-  
-  let newLikes;
-  if (isLiking) {
-    // Like: +1
-    newLikes = (item.likes || 0) + 1;
-    likedItems.add(itemId);
-  } else {
-    // Unlike: -1
-    newLikes = Math.max((item.likes || 0) - 1, 0);  // Don't go below 0
-    likedItems.delete(itemId);
-  }
-  
-  // Update local state immediately
-  item.likes = newLikes;
-  
-  // Update UI immediately
-  const likeArea = document.querySelector(`.lib-item-like[data-id="${itemId}"]`);
-  if (likeArea) {
-    const countEl = likeArea.querySelector('.lib-like-count');
-    const iconEl = likeArea.querySelector('.lib-like-btn');
-    
-    if (countEl) countEl.textContent = newLikes;
-    if (iconEl) iconEl.textContent = isLiking ? '❤️' : '👍';
-    
-    // Update class and title
-    if (isLiking) {
-      likeArea.classList.add('liked');
-      likeArea.title = '取消点赞';
-    } else {
-      likeArea.classList.remove('liked');
-      likeArea.title = '点赞';
-    }
-  }
-  
-  // Show toast immediately
-  showToast(isLiking ? '👍 已点赞' : '💔 已取消点赞');
-  
-  // Save to database in background
-  setSyncStatus('syncing');
-  try {
-    const { error } = await supaClient
-      .from('general_library_items')
-      .update({ likes: newLikes })
-      .eq('id', itemId);
-    
-    if (error) throw error;
-    
-    setSyncStatus('ok');
-  } catch(e) { 
-    // Rollback on error
-    if (isLiking) {
-      item.likes = newLikes - 1;
-      likedItems.delete(itemId);
-    } else {
-      item.likes = newLikes + 1;
-      likedItems.add(itemId);
-    }
-    
-    // Revert UI
-    if (likeArea) {
-      const countEl = likeArea.querySelector('.lib-like-count');
-      const iconEl = likeArea.querySelector('.lib-like-btn');
-      if (countEl) countEl.textContent = item.likes;
-      if (iconEl) iconEl.textContent = likedItems.has(itemId) ? '❤️' : '👍';
-      if (likedItems.has(itemId)) {
-        likeArea.classList.add('liked');
-        likeArea.title = '取消点赞';
-      } else {
-        likeArea.classList.remove('liked');
-        likeArea.title = '点赞';
-      }
-    }
-    
-    dbError('点赞操作', e);
-  }
-}
 
 // ── Crypto utilities ────────────────────────────────
 async function deriveKey(password, salt) {
@@ -1223,13 +1103,12 @@ async function hashPassword(password) {
 function updateSortButton(container) {
   const sortBtn = container.querySelector('#lib-sort-btn');
   if (!sortBtn) return;
-  
-  if (sortBy === 'likes') {
-    sortBtn.textContent = '👍 点赞排序';
-    sortBtn.title = '当前：按点赞数排序，点击切换为时间排序';
+  if (sortBy === 'asc') {
+    sortBtn.textContent = '🕐 旧→新';
+    sortBtn.title = '当前：旧→新，点击切换';
   } else {
-    sortBtn.textContent = '🕐 时间排序';
-    sortBtn.title = '当前：按创建时间排序，点击切换为点赞排序';
+    sortBtn.textContent = '🕐 新→旧';
+    sortBtn.title = '当前：新→旧，点击切换';
   }
 }
 
