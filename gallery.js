@@ -126,7 +126,7 @@ function buildHTML() {
     <input id="gal-author" type="text" placeholder="作者名..." autocomplete="off" style="margin-bottom:12px"/>
 
     <label>标签</label>
-    <div id="gal-tag-picker" class="gal-tag-picker"></div>
+    <div id="gal-tag-picker"lib></div>
     <div style="display:flex;gap:8px;margin-bottom:16px">
       <input id="gal-new-tag" type="text" placeholder="新增标签..." autocomplete="off"
         style="flex:1;padding:8px 12px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);font-size:13px"/>
