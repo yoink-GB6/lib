@@ -50,12 +50,9 @@ function buildHTML() {
 <div class="lib-layout">
   <!-- Main content area -->
   <div class="lib-main">
-    <div class="lib-header">
-      <h2>📋 指令集</h2>
-      <div style="display:flex;gap:8px;align-items:center">
-        <button class="btn bn" id="lib-sort-btn" title="切换排序方式">👍 点赞排序</button>
-        <button class="btn bp" id="lib-add-btn" style="display:none">＋ 新建</button>
-      </div>
+    <div style="display:flex;gap:8px;align-items:center;padding-bottom:16px;flex-shrink:0">
+      <button class="btn bn" id="lib-sort-btn" title="切换排序方式">👍 点赞排序</button>
+      <button class="btn bp" id="lib-add-btn" style="display:none">＋ 新建</button>
     </div>
     <div class="lib-grid" id="lib-grid"></div>
   </div>

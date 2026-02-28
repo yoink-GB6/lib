@@ -55,11 +55,6 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
 
 /* ── Main content ── */
 #main-content{flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative}
-#readonly-banner{
-  display:none;background:rgba(231,76,60,.12);border-bottom:1px solid rgba(231,76,60,.25);
-  color:#e07060;font-size:12px;padding:7px 16px;text-align:center;flex-shrink:0;
-}
-#readonly-banner.show{display:block}
 #page-root{flex:1;overflow:hidden;display:flex;flex-direction:column}
 
 /* ── Buttons ── */
@@ -221,7 +216,6 @@ textarea{resize:vertical;min-height:80px;line-height:1.6}
   </div>
 
   <div id="main-content">
-    <div id="readonly-banner" class="show">👁 只读模式 — 点击右上角「🔒 编辑」输入密码</div>
     <div id="page-root"></div>
   </div>
 </div>
@@ -248,15 +242,12 @@ import { mount } from './library.js';
 // ── Auth UI ────────────────────────────────────────
 onAuthChange(editor => {
   const btn = document.getElementById('lock-btn');
-  const banner = document.getElementById('readonly-banner');
   if (editor) {
     btn.textContent = '🔓 编辑中';
     btn.classList.add('unlocked');
-    banner.classList.remove('show');
   } else {
     btn.textContent = '🔒 编辑';
     btn.classList.remove('unlocked');
-    banner.classList.add('show');
   }
 });
 
