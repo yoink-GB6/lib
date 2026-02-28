@@ -51,18 +51,10 @@ function buildHTML() {
       <span id="gal-panel-chevron">▶</span>
     </div>
     <div class="lib-panel-body">
-      <!-- Sort -->
-      <div style="margin-bottom:14px">
-        <button class="btn bn" id="gal-sort-btn" style="width:100%;font-size:12px">🕐 旧→新</button>
-      </div>
-      <!-- Upload buttons (editor only) -->
-      <div id="gal-upload-btns" style="display:none;gap:6px;margin-bottom:14px">
-        <button class="btn bp" id="gal-add-btn" style="flex:1;font-size:12px;display:flex;align-items:center;justify-content:center;gap:5px;padding:7px 0">
-          <span style="font-size:15px">📁</span><span>上传</span>
-        </button>
-        <button class="btn bn" id="gal-link-btn" style="flex:1;font-size:12px;display:flex;align-items:center;justify-content:center;gap:5px;padding:7px 0">
-          <span style="font-size:15px">🔗</span><span>链接</span>
-        </button>
+      <!-- Sort + Add row -->
+      <div style="display:flex;gap:6px;margin-bottom:14px">
+        <button class="btn bn" id="gal-sort-btn" style="flex:1;font-size:12px">🕐 旧→新</button>
+        <button class="btn bp" id="gal-add-btn" style="display:none;font-size:12px;padding:6px 12px">＋ 新建</button>
       </div>
 
       <!-- Search -->
@@ -101,18 +93,27 @@ function buildHTML() {
       <img id="gal-preview-img" style="max-width:100%;max-height:240px;border-radius:8px;border:1px solid var(--border)"/>
     </div>
 
-    <!-- File input (only for new file upload) -->
-    <div id="gal-file-wrap" style="margin-bottom:12px">
-      <label style="font-size:13px;color:#889;display:block;margin-bottom:6px">图片文件</label>
-      <input id="gal-file-input" type="file" accept="image/*"
-        style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);font-size:13px;cursor:pointer"/>
-    </div>
-    <!-- Link input (only for link mode) -->
-    <div id="gal-link-wrap" style="margin-bottom:12px;display:none">
-      <label style="font-size:13px;color:#889;display:block;margin-bottom:6px">图片链接 URL</label>
-      <input id="gal-link-input" type="url" placeholder="https://..."
-        autocomplete="off"
-        style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);font-size:13px"/>
+    <!-- Upload mode selector (new items only) -->
+    <div id="gal-upload-mode" style="margin-bottom:14px">
+      <div style="display:flex;gap:8px;margin-bottom:12px">
+        <button id="gal-mode-file" class="btn bp" style="flex:1;font-size:13px;display:flex;align-items:center;justify-content:center;gap:6px;padding:8px 0">
+          <span style="font-size:16px">📁</span><span>上传文件</span>
+        </button>
+        <button id="gal-mode-link" class="btn bn" style="flex:1;font-size:13px;display:flex;align-items:center;justify-content:center;gap:6px;padding:8px 0">
+          <span style="font-size:16px">🔗</span><span>图片链接</span>
+        </button>
+      </div>
+      <!-- File input -->
+      <div id="gal-file-wrap" style="margin-bottom:4px">
+        <input id="gal-file-input" type="file" accept="image/*"
+          style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);font-size:13px;cursor:pointer"/>
+      </div>
+      <!-- Link input -->
+      <div id="gal-link-wrap" style="display:none;margin-bottom:4px">
+        <input id="gal-link-input" type="url" placeholder="https://..."
+          autocomplete="off"
+          style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);font-size:13px"/>
+      </div>
     </div>
 
     <label>标题（可选）</label>
@@ -160,8 +161,7 @@ function bindControls(container) {
   });
 
   // Add/upload button
-  container.querySelector('#gal-add-btn').addEventListener('click', () => openModal(null, container, 'file'));
-  container.querySelector('#gal-link-btn')?.addEventListener('click', () => openModal(null, container, 'link'));
+  container.querySelector('#gal-add-btn').addEventListener('click', () => openModal(null, container));
 
   // Panel toggle
   function togglePanel() {
@@ -206,6 +206,10 @@ function bindControls(container) {
     previewImg.src = url;
     previewWrap.style.display = '';
   });
+
+  // Upload mode toggle inside modal
+  container.querySelector('#gal-mode-file')?.addEventListener('click', () => switchUploadMode(container, 'file'));
+  container.querySelector('#gal-mode-link')?.addEventListener('click', () => switchUploadMode(container, 'link'));
 
   // Modal controls
   container.querySelector('#gal-cancel-btn').addEventListener('click', () => closeModal(container));
@@ -367,25 +371,20 @@ function closeLightbox(container) {
   container.querySelector('#gal-lightbox').classList.remove('show');
 }
 
-function openModal(item, container, mode = 'file') {
+function openModal(item, container) {
   editItemId = item ? item.id : null;
   const isEdit = !!item;
-  const isLink = mode === 'link';
-  container.querySelector('#gal-modal-title').textContent = isEdit ? '编辑图片信息' : (isLink ? '通过链接添加' : '上传图片');
+  container.querySelector('#gal-modal-title').textContent = isEdit ? '编辑图片信息' : '新建';
   container.querySelector('#gal-title').value = item?.title || '';
   container.querySelector('#gal-desc').value = item?.description || '';
   container.querySelector('#gal-author').value = item?.author || '';
 
-  // File input: show only for file upload mode on new items
-  const fileWrap = container.querySelector('#gal-file-wrap');
-  fileWrap.style.display = (!isEdit && !isLink) ? '' : 'none';
+  // Show/hide upload mode selector
+  const uploadMode = container.querySelector('#gal-upload-mode');
+  if (uploadMode) uploadMode.style.display = isEdit ? 'none' : '';
 
-  // Link input: show only for link mode on new items
-  const linkWrap = container.querySelector('#gal-link-wrap');
-  if (linkWrap) linkWrap.style.display = (!isEdit && isLink) ? '' : 'none';
-
-  // Store upload mode
-  container.querySelector('#gal-modal').dataset.mode = mode;
+  // Default to file mode for new items
+  if (!isEdit) switchUploadMode(container, 'file');
 
   // Preview
   const previewWrap = container.querySelector('#gal-preview-wrap');
@@ -408,6 +407,25 @@ function openModal(item, container, mode = 'file') {
 function closeModal(container) {
   container.querySelector('#gal-modal').classList.remove('show');
   editItemId = null;
+}
+
+function switchUploadMode(container, mode) {
+  container.querySelector('#gal-modal').dataset.mode = mode;
+  const fileWrap = container.querySelector('#gal-file-wrap');
+  const linkWrap = container.querySelector('#gal-link-wrap');
+  const btnFile = container.querySelector('#gal-mode-file');
+  const btnLink = container.querySelector('#gal-mode-link');
+  if (mode === 'file') {
+    fileWrap.style.display = '';
+    linkWrap.style.display = 'none';
+    btnFile.className = 'btn bp';
+    btnLink.className = 'btn bn';
+  } else {
+    fileWrap.style.display = 'none';
+    linkWrap.style.display = '';
+    btnFile.className = 'btn bn';
+    btnLink.className = 'btn bp';
+  }
 }
 
 function renderTagPicker(container, selectedItemTags) {
@@ -549,6 +567,6 @@ function updateSortButton(container) {
 }
 
 function updateGalleryUI(container) {
-  const wrap = container.querySelector('#gal-upload-btns');
-  if (wrap) wrap.style.display = isEditor() ? 'flex' : 'none';
+  const addBtn = container.querySelector('#gal-add-btn');
+  if (addBtn) addBtn.style.display = isEditor() ? '' : 'none';
 }
