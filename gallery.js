@@ -414,6 +414,8 @@ function renderGrid(container) {
   grid.innerHTML = filtered.map(item => {
     const tagsHtml = item.tags.map(t => `<span class="lib-item-tag">${escHtml(t)}</span>`).join('');
     const titleHtml = item.title ? `<div class="gal-item-title">${escHtml(item.title)}</div>` : '';
+    const authorHtml = item.author && item.author !== 'unknown'
+      ? `<div class="lib-item-author" style="padding:0 8px 8px;font-size:11px;color:var(--muted)">by ${escHtml(item.author)}</div>` : '';
     const editOverlay = editor
       ? `<div class="gal-edit-overlay"><span>✏️ 编辑</span></div>` : '';
     return `<div class="gal-item" data-id="${item.id}">
@@ -423,6 +425,7 @@ function renderGrid(container) {
       </div>
       ${titleHtml}
       ${tagsHtml ? `<div class="lib-item-tags" style="padding:0 8px 6px">${tagsHtml}</div>` : ''}
+      ${authorHtml}
     </div>`;
   }).join('');
 

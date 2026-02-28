@@ -204,6 +204,17 @@ textarea{resize:vertical;min-height:80px;line-height:1.6}
 .lib-tag-checkbox:hover{background:#22263a;border-color:var(--accent)}
 .lib-tag-checkbox input[type="checkbox"]{margin:0;cursor:pointer}
 
+/* Site entry gate */
+#entry-gate{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;align-items:center;justify-content:center}
+#entry-box{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:32px;width:min(360px,90vw);text-align:center}
+#entry-box h2{font-size:17px;font-weight:700;color:var(--accent);margin-bottom:8px}
+#entry-box p{font-size:13px;color:var(--muted);margin-bottom:20px}
+#entry-input{width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:14px;margin-bottom:10px;box-sizing:border-box;text-align:center;letter-spacing:2px}
+#entry-input:focus{outline:none;border-color:var(--accent)}
+#entry-error{color:var(--red);font-size:12px;margin-bottom:10px;display:none}
+#entry-btn{width:100%;padding:10px;background:var(--accent);color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:14px;font-weight:600}
+#entry-btn:hover{opacity:.88}
+
 /* Tab nav */
 #tab-nav{display:flex;gap:4px;margin-right:auto}
 .tab-btn{background:none;border:none;color:var(--muted);cursor:pointer;padding:6px 16px;border-radius:6px;font-size:13px;font-weight:600;transition:all .15s}
@@ -227,6 +238,16 @@ textarea{resize:vertical;min-height:80px;line-height:1.6}
 
 </head>
 <body>
+
+<div id="entry-gate">
+  <div id="entry-box">
+    <h2>🔐 访问验证</h2>
+    <p>请输入密码以继续</p>
+    <input id="entry-input" type="password" placeholder="••••••••" autocomplete="off"/>
+    <div id="entry-error">密码错误，请重试</div>
+    <button id="entry-btn">进入</button>
+  </div>
+</div>
 
 <div id="app">
   <!-- Topbar -->
@@ -263,6 +284,37 @@ import { showToast } from './ui.js';
 import { isEditor, tryUnlock, lock, onAuthChange } from './auth.js';
 import { mount as mountLibrary, unmount as unmountLibrary } from './library.js';
 import { mount as mountGallery, unmount as unmountGallery } from './gallery.js';
+
+// ── Site entry gate ───────────────────────────────
+const ENTRY_KEY = 'site_unlocked';
+const ENTRY_PW = window.EDIT_PASSWORD; // Reuse same password
+
+function checkEntry() {
+  if (sessionStorage.getItem(ENTRY_KEY) === '1') {
+    document.getElementById('entry-gate').style.display = 'none';
+    return true;
+  }
+  return false;
+}
+
+function submitEntry() {
+  const val = document.getElementById('entry-input').value;
+  if (val === ENTRY_PW) {
+    sessionStorage.setItem(ENTRY_KEY, '1');
+    document.getElementById('entry-gate').style.display = 'none';
+    initApp();
+  } else {
+    document.getElementById('entry-error').style.display = 'block';
+    document.getElementById('entry-input').value = '';
+    document.getElementById('entry-input').focus();
+  }
+}
+
+document.getElementById('entry-btn').addEventListener('click', submitEntry);
+document.getElementById('entry-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') submitEntry();
+  document.getElementById('entry-error').style.display = 'none';
+});
 
 // ── Auth UI ────────────────────────────────────────
 onAuthChange(editor => {
@@ -341,7 +393,13 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
   btn.addEventListener('click', () => switchTab(btn.dataset.tab));
 });
 
-await switchTab('library');
+async function initApp() {
+  await switchTab('library');
+}
+
+if (checkEntry()) {
+  await initApp();
+}
 </script>
 
 </body>
