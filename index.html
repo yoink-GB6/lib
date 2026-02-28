@@ -107,8 +107,8 @@ textarea{resize:vertical;min-height:80px;line-height:1.6}
 /* ── Expand float btn ── */
 .expand-btn-float{
   position:absolute;z-index:40;
-  width:26px;height:44px;border-radius:0 8px 8px 0;
-  border:1px solid var(--border);border-left:none;
+  width:26px;height:44px;border-radius:8px 0 0 8px;
+  border:1px solid var(--border);border-right:none;
   background:var(--panel);color:var(--muted);
   cursor:pointer;font-size:11px;
   opacity:0;pointer-events:none;
@@ -117,7 +117,7 @@ textarea{resize:vertical;min-height:80px;line-height:1.6}
 }
 .expand-btn-float.show{opacity:1;pointer-events:auto;}
 .expand-btn-float:hover{background:var(--accent);color:#fff;transform:scale(1.1)}
-#lib-expand{top:50%;right:8px;transform:translateY(-50%)}
+#lib-expand{top:50%;right:0;transform:translateY(-50%)}
 
 /* ── Toast ── */
 .toast-item{

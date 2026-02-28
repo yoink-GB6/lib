@@ -50,9 +50,7 @@ function buildHTML() {
 <div class="lib-layout">
   <!-- Main content area -->
   <div class="lib-main">
-    <div style="display:flex;gap:8px;align-items:center;padding-bottom:16px;flex-shrink:0">
-      <button class="btn bp" id="lib-add-btn" style="display:none">＋ 新建</button>
-    </div>
+
     <div class="lib-grid" id="lib-grid"></div>
   </div>
 
@@ -66,9 +64,10 @@ function buildHTML() {
       <span id="lib-panel-chevron">▶</span>
     </div>
     <div class="lib-panel-body">
-      <!-- Sort -->
-      <div style="margin-bottom:14px">
-        <button class="btn bn" id="lib-sort-btn" style="width:100%;font-size:12px" title="切换排序方式">👍 点赞排序</button>
+      <!-- Sort + Add -->
+      <div style="display:flex;gap:6px;margin-bottom:14px">
+        <button class="btn bn" id="lib-sort-btn" style="flex:1;font-size:12px" title="切换排序方式">👍 点赞排序</button>
+        <button class="btn bp" id="lib-add-btn" style="display:none;font-size:12px">＋ 新建</button>
       </div>
       <!-- Privacy unlock -->
       <div style="margin-bottom:16px">
