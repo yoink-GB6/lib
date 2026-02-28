@@ -4,14 +4,18 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>DAMIDAMIDAMIO</title>
+<title>指令集</title>
 
 <!-- ★ 填入你的 Supabase 配置 ★ -->
 <script>
   window.SUPABASE_URL  = 'https://hrgottdtlnihablruxtr.supabase.co';
   window.SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhyZ290dGR0bG5paGFibHJ1eHRyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEzMTcxOTAsImV4cCI6MjA4Njg5MzE5MH0.6Ng0E96W8VLnATqWgc_o7xVKCrzlewn0J-ba2ChpcE4';
-  window.EDIT_PASSWORD  = 'y'; /* ← 编辑模式密码 */
-  window.ENTRY_PASSWORD = 'yoinkpgz'; /* ← 网站入口密码 */
+  // 密码哈希值（SHA-256），不存明文密码
+  // 生成方式：在浏览器控制台运行：
+  //   crypto.subtle.digest('SHA-256', new TextEncoder().encode('你的密码'))
+  //     .then(b => console.log(Array.from(new Uint8Array(b)).map(x=>x.toString(16).padStart(2,'0')).join('')))
+  window.EDIT_PASSWORD_HASH  = 'your_edit_password_sha256_hash_here';  /* ← 编辑密码的哈希值 */
+  window.ENTRY_PASSWORD_HASH = 'your_entry_password_sha256_hash_here'; /* ← 入口密码的哈希值 */
 </script>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
@@ -300,14 +304,13 @@ textarea{resize:vertical;min-height:80px;line-height:1.6}
 
 <script type="module">
 import { showToast } from './ui.js';
-import { isEditor, tryUnlock, lock, onAuthChange } from './auth.js';
+import { isEditor, tryUnlock, lock, onAuthChange, checkEntryPassword } from './auth.js';
 import { mount as mountLibrary, unmount as unmountLibrary } from './library.js';
 import { mount as mountGallery, unmount as unmountGallery } from './gallery.js';
 import { mount as mountArticles, unmount as unmountArticles } from './articles.js';
 
 // ── Site entry gate ───────────────────────────────
 const ENTRY_KEY = 'site_unlocked';
-const ENTRY_PW = window.ENTRY_PASSWORD;
 
 function checkEntry() {
   if (sessionStorage.getItem(ENTRY_KEY) === '1') {
@@ -317,9 +320,10 @@ function checkEntry() {
   return false;
 }
 
-function submitEntry() {
+async function submitEntry() {
   const val = document.getElementById('entry-input').value;
-  if (val === ENTRY_PW) {
+  const ok = await checkEntryPassword(val);
+  if (ok) {
     sessionStorage.setItem(ENTRY_KEY, '1');
     document.getElementById('entry-gate').style.display = 'none';
     initApp();
@@ -361,15 +365,9 @@ window.closePwModal = function() {
   document.getElementById('pw-error').style.display = 'none';
   document.getElementById('pw-input').value = '';
 };
-window.submitPw = function() {
+window.submitPw = async function() {
   const pw = document.getElementById('pw-input').value;
-  let success = false;
-  try {
-    success = tryUnlock(pw);
-  } catch(e) {
-    console.error('[submitPw] error:', e);
-    success = true;
-  }
+  const success = await tryUnlock(pw);
   if (success) {
     window.closePwModal();
     showToast('✅ 已解锁编辑模式');
