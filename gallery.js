@@ -461,8 +461,8 @@ async function saveItem(container) {
   const title = container.querySelector('#gal-title').value.trim();
   const description = container.querySelector('#gal-desc').value.trim();
   const author = container.querySelector('#gal-author').value.trim();
-  const selectedItemTags = Array.from(container.querySelectorAll('#gal-tag-picker input[type="checkbox"]:checked'))
-    .map(cb => cb.value);
+  const selectedItemTags = Array.from(container.querySelectorAll('#gal-tag-picker .lib-tag-item.active')
+).map(el => el.dataset.tag);
   const savingId = editItemId;
 
   closeModal(container);
