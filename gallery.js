@@ -430,12 +430,21 @@ function switchUploadMode(container, mode) {
 
 function renderTagPicker(container, selectedItemTags) {
   const picker = container.querySelector('#gal-tag-picker');
-  picker.innerHTML = tags.map(tag => `
-    <label style="display:inline-flex;align-items:center;gap:4px;margin:0 6px 6px 0;cursor:pointer;font-size:13px">
-      <input type="checkbox" value="${escHtml(tag)}" ${selectedItemTags.includes(tag) ? 'checked' : ''}/>
-      ${escHtml(tag)}
-    </label>`).join('');
+  picker.innerHTML = tags.map(tag => {
+    const active = selectedItemTags.includes(tag) ? 'active' : '';
+    return `
+      <div class="lib-tag-item ${active}" data-tag="${escHtml(tag)}">
+        <span class="lib-tag-label">${escHtml(tag)}</span>
+      </div>`;
+  }).join('');
+
+  picker.querySelectorAll('.lib-tag-item').forEach(el => {
+    el.addEventListener('click', () => {
+      el.classList.toggle('active');
+    });
+  });
 }
+
 
 function addNewTag(container) {
   const input = container.querySelector('#gal-new-tag');
