@@ -389,20 +389,10 @@ async function fetchAll() {
 }
 
 function sortItems() {
-  if (sortBy === 'likes') {
-    // Sort by likes descending, then by created_at descending
-    items.sort((a, b) => {
-      if (b.likes !== a.likes) {
-        return b.likes - a.likes;
-      }
-      return new Date(b.createdAt) - new Date(a.createdAt);
-    });
-  } else if (sortBy === 'created') {
-    // Sort by created_at descending (newest first)
-    items.sort((a, b) => {
-      return new Date(b.createdAt) - new Date(a.createdAt);
-    });
-  }
+  items.sort((a, b) => sortBy === 'asc'
+    ? new Date(a.createdAt) - new Date(b.createdAt)
+    : new Date(b.createdAt) - new Date(a.createdAt)
+  );
 }
 
 function updateAuthorList(authors) {
@@ -538,18 +528,10 @@ function renderGrid(container) {
   }
   
   // Step 4: Sort filtered items
-  if (sortBy === 'likes') {
-    filtered.sort((a, b) => {
-      if (b.likes !== a.likes) {
-        return b.likes - a.likes;
-      }
-      return new Date(b.createdAt) - new Date(a.createdAt);
-    });
-  } else if (sortBy === 'created') {
-    filtered.sort((a, b) => {
-      return new Date(b.createdAt) - new Date(a.createdAt);
-    });
-  }
+  filtered.sort((a, b) => sortBy === 'asc'
+    ? new Date(a.createdAt) - new Date(b.createdAt)
+    : new Date(b.createdAt) - new Date(a.createdAt)
+  );
   
   grid.innerHTML = filtered.map(item => {
     // Use decrypted content if available (for private items)
