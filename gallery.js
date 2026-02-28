@@ -248,19 +248,58 @@ function bindControls(container) {
     img.style.cursor = lbScale > 1 ? 'grab' : 'default';
   });
 
+  // Touch: pinch-to-zoom + single-finger pan
   let lastTouchDist = 0;
+  let lastTouchMid = { x: 0, y: 0 };
+  let touchPanStart = { x: 0, y: 0 };
+  let touchPanning = false;
+
   img.addEventListener('touchstart', e => {
     if (e.touches.length === 2) {
-      lastTouchDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+      touchPanning = false;
+      lastTouchDist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      lastTouchMid = {
+        x: (e.touches[0].clientX + e.touches[1].clientX) / 2,
+        y: (e.touches[0].clientY + e.touches[1].clientY) / 2
+      };
+    } else if (e.touches.length === 1 && lbScale > 1) {
+      touchPanning = true;
+      touchPanStart = {
+        x: e.touches[0].clientX - lbLastTranslate.x,
+        y: e.touches[0].clientY - lbLastTranslate.y
+      };
     }
   }, { passive: true });
+
   img.addEventListener('touchmove', e => {
-    if (e.touches.length !== 2) return;
     e.preventDefault();
-    const dist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
-    if (lastTouchDist) setLbScale(container, lbScale * (dist / lastTouchDist));
-    lastTouchDist = dist;
+    if (e.touches.length === 2) {
+      touchPanning = false;
+      const dist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      if (lastTouchDist) setLbScale(container, lbScale * (dist / lastTouchDist));
+      lastTouchDist = dist;
+    } else if (e.touches.length === 1 && touchPanning && lbScale > 1) {
+      lbTranslate = {
+        x: e.touches[0].clientX - touchPanStart.x,
+        y: e.touches[0].clientY - touchPanStart.y
+      };
+      applyLbTransform(container);
+    }
   }, { passive: false });
+
+  img.addEventListener('touchend', e => {
+    if (e.touches.length === 0 && touchPanning) {
+      lbLastTranslate = { ...lbTranslate };
+      touchPanning = false;
+    }
+    if (e.touches.length < 2) lastTouchDist = 0;
+  }, { passive: true });
 }
 
 function setLbScale(container, scale) {
@@ -588,5 +627,6 @@ function updateSortButton(container) {
 function updateGalleryUI(container) {
   const addBtn = container.querySelector('#gal-add-btn');
   if (addBtn) addBtn.style.display = isEditor() ? '' : 'none';
+  renderTagList(container.querySelector('#gal-tag-list'));
   renderGrid(container);
 }

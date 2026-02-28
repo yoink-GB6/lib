@@ -214,8 +214,8 @@ textarea{resize:vertical;min-height:80px;line-height:1.6}
 .gal-grid{flex:1;overflow-y:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:16px;padding-bottom:20px;align-content:start;align-items:start}
 .gal-grid::-webkit-scrollbar{width:4px}
 .gal-grid::-webkit-scrollbar-thumb{background:var(--ibr);border-radius:3px}
-.gal-item{background:var(--panel);border:1px solid var(--border);border-radius:10px;overflow:hidden;cursor:pointer;transition:transform .15s,box-shadow .15s}
-.gal-item:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,.3)}
+.gal-item{background:var(--panel);border:1px solid var(--border);border-radius:10px;overflow:hidden;cursor:pointer;transition:box-shadow .15s;position:relative}
+.gal-item:hover{box-shadow:0 4px 16px rgba(0,0,0,.4)}
 .gal-item-img-wrap{width:100%;aspect-ratio:1;overflow:hidden;background:#111}
 .gal-item-img{width:100%;height:100%;object-fit:cover;transition:transform .2s}
 .gal-item:hover .gal-item-img{transform:scale(1.04)}
