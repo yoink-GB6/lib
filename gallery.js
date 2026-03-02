@@ -98,8 +98,14 @@ function buildHTML() {
 
       <!-- File mode -->
       <div id="gal-file-wrap">
-        <input id="gal-file-input" type="file" accept="image/*" multiple
-          style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);font-size:13px;cursor:pointer"/>
+        <input id="gal-file-input" type="file" accept="image/*" multiple style="display:none"/>
+        <div id="gal-file-dropzone"
+          style="border:2px dashed var(--border);border-radius:10px;padding:20px 16px;
+                 text-align:center;cursor:pointer;transition:all .2s;color:#889">
+          <div style="font-size:26px;margin-bottom:6px;line-height:1">📁</div>
+          <div style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:3px">点击或拖拽图片到此处</div>
+          <div style="font-size:11px">支持同时选择多张</div>
+        </div>
         <!-- multi-file preview -->
         <div id="gal-multi-preview" style="display:none;margin-top:10px">
           <div id="gal-multi-count" style="font-size:12px;color:#889;margin-bottom:6px"></div>
@@ -211,22 +217,30 @@ function bindControls(container) {
     renderGrid(container);
   });
 
+  // Dropzone
+  const dropzone = container.querySelector('#gal-file-dropzone');
+  const fileInput = container.querySelector('#gal-file-input');
+  dropzone.addEventListener('click', () => fileInput.click());
+  dropzone.addEventListener('dragover', e => {
+    e.preventDefault();
+    dropzone.style.borderColor = 'var(--accent)';
+    dropzone.style.background = 'rgba(124,131,247,.08)';
+  });
+  dropzone.addEventListener('dragleave', () => {
+    dropzone.style.borderColor = '';
+    dropzone.style.background = '';
+  });
+  dropzone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropzone.style.borderColor = '';
+    dropzone.style.background = '';
+    const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+    if (files.length) triggerFileSelect(files, container);
+  });
+
   container.querySelector('#gal-file-input').addEventListener('change', e => {
     const files = Array.from(e.target.files);
-    if (!files.length) return;
-    if (files.length === 1) {
-      // single: show preview + single-fields
-      container.querySelector('#gal-single-fields').style.display = '';
-      container.querySelector('#gal-multi-preview').style.display = 'none';
-      const previewWrap = container.querySelector('#gal-preview-wrap');
-      const previewImg = container.querySelector('#gal-preview-img');
-      previewImg.src = URL.createObjectURL(files[0]);
-      previewWrap.style.display = '';
-    } else {
-      // multi: show thumbs, hide single-fields
-      container.querySelector('#gal-single-fields').style.display = 'none';
-      showMultiThumbs(files, container);
-    }
+    if (files.length) triggerFileSelect(files, container);
   });
 
   // Link textarea: update count hint as user types
@@ -517,6 +531,14 @@ function openModal(item, container) {
     container.querySelector('#gal-preview-img').src = '';
     container.querySelector('#gal-upload-progress').style.display = 'none';
     container.querySelector('#gal-save-btn').disabled = false;
+    // Reset dropzone
+    const dz = container.querySelector('#gal-file-dropzone');
+    if (dz) {
+      dz.querySelector('div:nth-child(2)').textContent = '点击或拖拽图片到此处';
+      dz.style.borderColor = '';
+      dz.style.color = '';
+      dz.style.background = '';
+    }
   }
 
   // Edit mode: show existing image preview
@@ -646,6 +668,27 @@ async function saveItem(container) {
 }
 
 // Parse links from textarea (split by newline / comma / space)
+function triggerFileSelect(files, container) {
+  if (files.length === 1) {
+    container.querySelector('#gal-single-fields').style.display = '';
+    container.querySelector('#gal-multi-preview').style.display = 'none';
+    const previewImg = container.querySelector('#gal-preview-img');
+    previewImg.src = URL.createObjectURL(files[0]);
+    container.querySelector('#gal-preview-wrap').style.display = '';
+  } else {
+    container.querySelector('#gal-single-fields').style.display = 'none';
+    showMultiThumbs(files, container);
+  }
+  // Update dropzone label
+  const dz = container.querySelector('#gal-file-dropzone');
+  if (dz) {
+    dz.querySelector('div:nth-child(2)').textContent =
+      files.length === 1 ? files[0].name : `已选 ${files.length} 张图片`;
+    dz.style.borderColor = 'var(--accent)';
+    dz.style.color = 'var(--accent)';
+  }
+}
+
 function parseLinks(raw) {
   return raw.split(/[\n,\s]+/).map(s => s.trim()).filter(s => s.startsWith('http'));
 }
@@ -696,7 +739,7 @@ async function runModalBatch(container, items, author, tags) {
         imageUrl = item.url;
       }
       const { error } = await supaClient.from(TABLE).insert({
-        title: item.type === 'file' ? item.file.name.replace(/\.[^.]+$/, '') : '',
+        title: '',
         description: '', author,
         tags_json: JSON.stringify(tags),
         image_url: imageUrl, storage_path: storagePath,
