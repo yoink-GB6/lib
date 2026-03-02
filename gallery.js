@@ -233,7 +233,7 @@ function bindControls(container) {
   container.querySelector('#gal-link-input').addEventListener('input', e => {
     const urls = parseLinks(e.target.value);
     const cnt = container.querySelector('#gal-link-count');
-    cnt.textContent = urls.length ? \`已识别 \${urls.length} 个链接\` : '';
+    cnt.textContent = urls.length ? `已识别 ${urls.length} 个链接` : '';
   });
 
   container.querySelector('#gal-mode-file')?.addEventListener('click', () => switchUploadMode(container, 'file'));
