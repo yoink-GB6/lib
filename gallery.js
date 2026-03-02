@@ -58,7 +58,6 @@ function buildHTML() {
       <div style="display:flex;gap:6px;margin-bottom:14px">
         <button class="btn bn" id="gal-sort-btn" style="flex:1;font-size:12px">🕐 旧→新</button>
         <button class="btn bp" id="gal-add-btn" style="display:none;font-size:12px;padding:6px 12px">＋ 新建</button>
-        <button class="btn bn" id="gal-batch-btn" style="display:none;font-size:12px;padding:6px 10px" title="批量上传">⬆ 批量</button>
       </div>
       <div style="margin-bottom:16px">
         <input id="gal-search-input" type="text" placeholder="搜索标题/描述..."
@@ -83,15 +82,12 @@ function buildHTML() {
 
 <!-- Edit / New modal -->
 <div id="gal-modal" class="tl-modal-overlay">
-  <div class="tl-modal" style="max-width:520px" onmousedown="event.stopPropagation()">
+  <div class="tl-modal" style="max-width:560px" onmousedown="event.stopPropagation()">
     <h2 id="gal-modal-title" style="color:var(--accent)">新建</h2>
 
-    <div id="gal-preview-wrap" style="margin-bottom:12px;text-align:center;display:none">
-      <img id="gal-preview-img" style="max-width:100%;max-height:200px;border-radius:8px;border:1px solid var(--border)"/>
-    </div>
-
+    <!-- Upload mode toggle (new only) -->
     <div id="gal-upload-mode" style="margin-bottom:14px">
-      <div style="display:flex;gap:8px;margin-bottom:10px">
+      <div style="display:flex;gap:8px;margin-bottom:12px">
         <button id="gal-mode-file" class="btn bp" style="flex:1;font-size:13px;display:flex;align-items:center;justify-content:center;gap:6px;padding:8px 0">
           <span style="font-size:16px">📁</span><span>上传文件</span>
         </button>
@@ -99,24 +95,48 @@ function buildHTML() {
           <span style="font-size:16px">🔗</span><span>图片链接</span>
         </button>
       </div>
-      <div id="gal-file-wrap" style="margin-bottom:4px">
-        <input id="gal-file-input" type="file" accept="image/*"
+
+      <!-- File mode -->
+      <div id="gal-file-wrap">
+        <input id="gal-file-input" type="file" accept="image/*" multiple
           style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);font-size:13px;cursor:pointer"/>
+        <!-- multi-file preview -->
+        <div id="gal-multi-preview" style="display:none;margin-top:10px">
+          <div id="gal-multi-count" style="font-size:12px;color:#889;margin-bottom:6px"></div>
+          <div id="gal-multi-thumbs" style="display:flex;flex-wrap:wrap;gap:6px;max-height:130px;overflow-y:auto;scrollbar-width:none"></div>
+        </div>
       </div>
-      <div id="gal-link-wrap" style="display:none;margin-bottom:4px">
-        <input id="gal-link-input" type="url" placeholder="https://..."
+
+      <!-- Link mode -->
+      <div id="gal-link-wrap" style="display:none">
+        <textarea id="gal-link-input"
+          rows="3" placeholder="每行一个链接，或用空格 / 逗号分隔&#10;https://example.com/a.jpg&#10;https://example.com/b.jpg"
           autocomplete="off"
-          style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);font-size:13px"/>
+          style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);font-size:13px;resize:vertical;font-family:inherit"></textarea>
+        <div id="gal-link-count" style="font-size:12px;color:#889;margin-top:4px"></div>
       </div>
     </div>
 
-    <label>标题（可选）</label>
-    <input id="gal-title" type="text" placeholder="图片标题..." autocomplete="off" style="margin-bottom:12px"/>
+    <!-- Single-image fields (hidden in multi mode) -->
+    <div id="gal-single-fields">
+      <div id="gal-preview-wrap" style="margin-bottom:12px;text-align:center;display:none">
+        <img id="gal-preview-img" style="max-width:100%;max-height:180px;border-radius:8px;border:1px solid var(--border)"/>
+      </div>
+      <label>标题（可选）</label>
+      <input id="gal-title" type="text" placeholder="图片标题..." autocomplete="off" style="margin-bottom:12px"/>
+      <label>描述（可选）</label>
+      <textarea id="gal-desc" rows="2" placeholder="图片描述..." style="margin-bottom:12px;font-family:inherit;resize:vertical"></textarea>
+    </div>
 
-    <label>描述（可选）</label>
-    <textarea id="gal-desc" rows="3" placeholder="图片描述..." style="margin-bottom:12px;font-family:inherit;resize:vertical"></textarea>
+    <!-- Progress (batch) -->
+    <div id="gal-upload-progress" style="display:none;margin-bottom:12px">
+      <div id="gal-upload-progress-text" style="font-size:12px;color:#889;margin-bottom:5px"></div>
+      <div style="background:var(--bg);border-radius:4px;height:5px;overflow:hidden">
+        <div id="gal-upload-progress-bar" style="height:100%;background:var(--accent);transition:width .2s;width:0%"></div>
+      </div>
+    </div>
 
-    <label>作者</label>
+    <label>作者（可选）</label>
     <input id="gal-author" type="text" placeholder="作者名..." autocomplete="off" style="margin-bottom:12px"/>
 
     <label>标签</label>
@@ -131,58 +151,6 @@ function buildHTML() {
       <button class="btn bd" id="gal-delete-btn" style="display:none;margin-right:auto">🗑 删除</button>
       <button class="btn bn" id="gal-cancel-btn">取消</button>
       <button class="btn bp" id="gal-save-btn">保存</button>
-    </div>
-  </div>
-</div>
-
-<!-- Batch upload modal -->
-<div id="gal-batch-modal" class="tl-modal-overlay">
-  <div class="tl-modal" style="max-width:600px" onmousedown="event.stopPropagation()">
-    <h2 style="color:var(--accent)">批量上传</h2>
-
-    <!-- Drop zone -->
-    <div id="gal-batch-dropzone"
-      style="border:2px dashed var(--border);border-radius:10px;padding:28px;text-align:center;
-             cursor:pointer;transition:all .2s;margin-bottom:14px;color:#889;font-size:14px">
-      <div style="font-size:32px;margin-bottom:8px">📁</div>
-      <div>点击选择或拖拽图片到此处</div>
-      <div style="font-size:12px;margin-top:4px">支持同时选多张</div>
-      <input id="gal-batch-input" type="file" accept="image/*" multiple
-        style="display:none"/>
-    </div>
-
-    <!-- Preview list -->
-    <div id="gal-batch-preview" style="display:none;margin-bottom:14px">
-      <div style="font-size:12px;color:#889;margin-bottom:8px" id="gal-batch-count"></div>
-      <div id="gal-batch-thumbs"
-        style="display:flex;flex-wrap:wrap;gap:8px;max-height:200px;overflow-y:auto;
-               padding:4px;scrollbar-width:none"></div>
-    </div>
-
-    <!-- Shared fields -->
-    <label>作者（可选，所有图片共用）</label>
-    <input id="gal-batch-author" type="text" placeholder="作者名..." autocomplete="off" style="margin-bottom:12px"/>
-
-    <label>标签（可选，所有图片共用）</label>
-    <div id="gal-batch-tag-picker" style="margin-bottom:8px"></div>
-    <div style="display:flex;gap:8px;margin-bottom:16px">
-      <input id="gal-batch-new-tag" type="text" placeholder="新增标签..." autocomplete="off"
-        style="flex:1;padding:8px 12px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);font-size:13px"/>
-      <button class="btn bn" id="gal-batch-add-tag-btn" style="padding:8px 14px">＋</button>
-    </div>
-
-    <!-- Progress -->
-    <div id="gal-batch-progress" style="display:none;margin-bottom:14px">
-      <div style="font-size:12px;color:#889;margin-bottom:6px" id="gal-batch-progress-text">上传中...</div>
-      <div style="background:var(--bg);border-radius:4px;height:6px;overflow:hidden">
-        <div id="gal-batch-progress-bar"
-          style="height:100%;background:var(--accent);transition:width .2s;width:0%"></div>
-      </div>
-    </div>
-
-    <div style="display:flex;gap:8px;justify-content:flex-end">
-      <button class="btn bn" id="gal-batch-cancel-btn">取消</button>
-      <button class="btn bp" id="gal-batch-upload-btn" disabled>上传</button>
     </div>
   </div>
 </div>
@@ -213,7 +181,6 @@ function bindControls(container) {
   });
 
   container.querySelector('#gal-add-btn').addEventListener('click', () => openModal(null, container));
-  container.querySelector('#gal-batch-btn').addEventListener('click', () => openBatchModal(container));
 
   function togglePanel() {
     const panel = container.querySelector('#gal-panel');
@@ -245,12 +212,28 @@ function bindControls(container) {
   });
 
   container.querySelector('#gal-file-input').addEventListener('change', e => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const previewWrap = container.querySelector('#gal-preview-wrap');
-    const previewImg = container.querySelector('#gal-preview-img');
-    previewImg.src = URL.createObjectURL(file);
-    previewWrap.style.display = '';
+    const files = Array.from(e.target.files);
+    if (!files.length) return;
+    if (files.length === 1) {
+      // single: show preview + single-fields
+      container.querySelector('#gal-single-fields').style.display = '';
+      container.querySelector('#gal-multi-preview').style.display = 'none';
+      const previewWrap = container.querySelector('#gal-preview-wrap');
+      const previewImg = container.querySelector('#gal-preview-img');
+      previewImg.src = URL.createObjectURL(files[0]);
+      previewWrap.style.display = '';
+    } else {
+      // multi: show thumbs, hide single-fields
+      container.querySelector('#gal-single-fields').style.display = 'none';
+      showMultiThumbs(files, container);
+    }
+  });
+
+  // Link textarea: update count hint as user types
+  container.querySelector('#gal-link-input').addEventListener('input', e => {
+    const urls = parseLinks(e.target.value);
+    const cnt = container.querySelector('#gal-link-count');
+    cnt.textContent = urls.length ? \`已识别 \${urls.length} 个链接\` : '';
   });
 
   container.querySelector('#gal-mode-file')?.addEventListener('click', () => switchUploadMode(container, 'file'));
@@ -265,41 +248,6 @@ function bindControls(container) {
   container.querySelector('#gal-add-tag-btn').addEventListener('click', () => addNewTag(container));
   container.querySelector('#gal-new-tag').addEventListener('keydown', e => {
     if (e.key === 'Enter') { e.preventDefault(); addNewTag(container); }
-  });
-
-  // Batch modal
-  const batchModal = container.querySelector('#gal-batch-modal');
-  const dropzone = container.querySelector('#gal-batch-dropzone');
-  const batchInput = container.querySelector('#gal-batch-input');
-
-  dropzone.addEventListener('click', () => batchInput.click());
-  batchInput.addEventListener('change', e => handleBatchFiles(Array.from(e.target.files), container));
-
-  dropzone.addEventListener('dragover', e => {
-    e.preventDefault();
-    dropzone.style.borderColor = 'var(--accent)';
-    dropzone.style.background = 'rgba(124,131,247,.07)';
-  });
-  dropzone.addEventListener('dragleave', () => {
-    dropzone.style.borderColor = '';
-    dropzone.style.background = '';
-  });
-  dropzone.addEventListener('drop', e => {
-    e.preventDefault();
-    dropzone.style.borderColor = '';
-    dropzone.style.background = '';
-    const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
-    if (files.length) handleBatchFiles(files, container);
-  });
-
-  container.querySelector('#gal-batch-cancel-btn').addEventListener('click', () => closeBatchModal(container));
-  batchModal.addEventListener('mousedown', e => {
-    if (e.target === batchModal) closeBatchModal(container);
-  });
-  container.querySelector('#gal-batch-upload-btn').addEventListener('click', () => runBatchUpload(container));
-  container.querySelector('#gal-batch-add-tag-btn').addEventListener('click', () => addBatchTag(container));
-  container.querySelector('#gal-batch-new-tag').addEventListener('keydown', e => {
-    if (e.key === 'Enter') { e.preventDefault(); addBatchTag(container); }
   });
 
   // Lightbox
@@ -553,21 +501,28 @@ function openModal(item, container) {
 
   const uploadMode = container.querySelector('#gal-upload-mode');
   if (uploadMode) uploadMode.style.display = isEdit ? 'none' : '';
-  if (!isEdit) switchUploadMode(container, 'file');
 
   const delBtn = container.querySelector('#gal-delete-btn');
   if (delBtn) delBtn.style.display = isEdit ? '' : 'none';
 
-  const previewWrap = container.querySelector('#gal-preview-wrap');
-  const previewImg = container.querySelector('#gal-preview-img');
-  if (item) {
-    previewImg.src = item.imageUrl;
-    previewWrap.style.display = '';
-  } else {
-    previewImg.src = ''; previewWrap.style.display = 'none';
+  if (!isEdit) {
+    // Reset to file mode, clear inputs
+    switchUploadMode(container, 'file');
     container.querySelector('#gal-file-input').value = '';
-    const li = container.querySelector('#gal-link-input');
-    if (li) li.value = '';
+    container.querySelector('#gal-link-input').value = '';
+    container.querySelector('#gal-link-count').textContent = '';
+    container.querySelector('#gal-multi-preview').style.display = 'none';
+    container.querySelector('#gal-single-fields').style.display = '';
+    container.querySelector('#gal-preview-wrap').style.display = 'none';
+    container.querySelector('#gal-preview-img').src = '';
+    container.querySelector('#gal-upload-progress').style.display = 'none';
+    container.querySelector('#gal-save-btn').disabled = false;
+  }
+
+  // Edit mode: show existing image preview
+  if (isEdit) {
+    container.querySelector('#gal-preview-wrap').style.display = '';
+    container.querySelector('#gal-preview-img').src = item.imageUrl;
   }
 
   renderTagPicker(container, item?.tags || []);
@@ -617,44 +572,154 @@ function addNewTag(container) {
 async function saveItem(container) {
   const title = container.querySelector('#gal-title').value.trim();
   const description = container.querySelector('#gal-desc').value.trim();
-  const author = container.querySelector('#gal-author').value.trim();
+  const author = container.querySelector('#gal-author').value.trim() || 'unknown';
   const selectedItemTags = Array.from(container.querySelectorAll('#gal-tag-picker input[type="checkbox"]:checked')).map(cb => cb.value);
   const savingId = editItemId;
-  closeModal(container);
-  setSyncStatus('syncing');
-  try {
-    if (savingId) {
+
+  // ── Edit existing ──
+  if (savingId) {
+    closeModal(container);
+    setSyncStatus('syncing');
+    try {
       const { error } = await supaClient.from(TABLE).update({
-        title, description, author: author || 'unknown', tags_json: JSON.stringify(selectedItemTags),
+        title, description, author, tags_json: JSON.stringify(selectedItemTags),
       }).eq('id', savingId);
       if (error) throw error;
       showToast('已更新');
+      await fetchAll(); setSyncStatus('ok');
+    } catch(e) { dbError('保存图片', e); }
+    return;
+  }
+
+  const mode = container.querySelector('#gal-modal').dataset.mode || 'file';
+
+  // ── Link mode ──
+  if (mode === 'link') {
+    const urls = parseLinks(container.querySelector('#gal-link-input').value);
+    if (!urls.length) { showToast('请输入至少一个图片链接'); return; }
+    if (urls.length === 1) {
+      // single link
+      closeModal(container);
+      setSyncStatus('syncing');
+      try {
+        const { error } = await supaClient.from(TABLE).insert({
+          title, description, author, tags_json: JSON.stringify(selectedItemTags),
+          image_url: urls[0], storage_path: '',
+        });
+        if (error) throw error;
+        showToast('已添加');
+        await fetchAll(); setSyncStatus('ok');
+      } catch(e) { dbError('保存图片', e); }
     } else {
-      const mode = container.querySelector('#gal-modal').dataset.mode || 'file';
+      // multi link — batch with progress
+      await runModalBatch(container, urls.map(u => ({ type: 'link', url: u })), author, selectedItemTags);
+    }
+    return;
+  }
+
+  // ── File mode ──
+  const files = Array.from(container.querySelector('#gal-file-input').files);
+  if (!files.length) { showToast('请选择图片文件'); return; }
+  if (files.length === 1) {
+    // single file
+    closeModal(container);
+    setSyncStatus('syncing');
+    try {
+      const file = files[0];
+      const ext = file.name.split('.').pop();
+      const storagePath = `${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+      const { error: upErr } = await supaClient.storage.from(BUCKET).upload(storagePath, file, { cacheControl: '3600', upsert: false });
+      if (upErr) throw upErr;
+      const { data: urlData } = supaClient.storage.from(BUCKET).getPublicUrl(storagePath);
+      const { error } = await supaClient.from(TABLE).insert({
+        title, description, author, tags_json: JSON.stringify(selectedItemTags),
+        image_url: urlData.publicUrl, storage_path: storagePath,
+      });
+      if (error) throw error;
+      showToast('已上传');
+      await fetchAll(); setSyncStatus('ok');
+    } catch(e) { dbError('保存图片', e); }
+  } else {
+    // multi file — batch with progress
+    await runModalBatch(container, files.map(f => ({ type: 'file', file: f })), author, selectedItemTags);
+  }
+}
+
+// Parse links from textarea (split by newline / comma / space)
+function parseLinks(raw) {
+  return raw.split(/[\n,\s]+/).map(s => s.trim()).filter(s => s.startsWith('http'));
+}
+
+// Show multi-file thumbnails
+function showMultiThumbs(files, container) {
+  const thumbs = container.querySelector('#gal-multi-thumbs');
+  thumbs.innerHTML = '';
+  files.forEach(f => {
+    const img = document.createElement('img');
+    img.src = URL.createObjectURL(f);
+    img.style.cssText = 'width:60px;height:60px;object-fit:cover;border-radius:6px;border:1px solid var(--border);flex-shrink:0';
+    thumbs.appendChild(img);
+  });
+  container.querySelector('#gal-multi-count').textContent = `已选 ${files.length} 张`;
+  container.querySelector('#gal-multi-preview').style.display = '';
+}
+
+// Batch upload inside the modal (with inline progress bar)
+async function runModalBatch(container, items, author, tags) {
+  const total = items.length;
+  let done = 0, failed = 0;
+  const saveBtn = container.querySelector('#gal-save-btn');
+  const cancelBtn = container.querySelector('#gal-cancel-btn');
+  const progressWrap = container.querySelector('#gal-upload-progress');
+  const progressText = container.querySelector('#gal-upload-progress-text');
+  const progressBar = container.querySelector('#gal-upload-progress-bar');
+
+  saveBtn.disabled = true;
+  cancelBtn.disabled = true;
+  progressWrap.style.display = '';
+  setSyncStatus('syncing');
+
+  for (const item of items) {
+    const label = item.type === 'file' ? item.file.name : item.url.slice(0, 40) + '…';
+    progressText.textContent = `上传中 ${done + 1} / ${total}：${label}`;
+    progressBar.style.width = `${Math.round((done / total) * 100)}%`;
+    try {
       let imageUrl = '', storagePath = '';
-      if (mode === 'link') {
-        imageUrl = container.querySelector('#gal-link-input').value.trim();
-        if (!imageUrl) { showToast('请输入图片链接'); setSyncStatus('ok'); return; }
-      } else {
-        const file = container.querySelector('#gal-file-input').files[0];
-        if (!file) { showToast('请选择图片文件'); setSyncStatus('ok'); return; }
-        const ext = file.name.split('.').pop();
+      if (item.type === 'file') {
+        const ext = item.file.name.split('.').pop();
         storagePath = `${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
-        const { error: upErr } = await supaClient.storage.from(BUCKET).upload(storagePath, file, { cacheControl: '3600', upsert: false });
+        const { error: upErr } = await supaClient.storage.from(BUCKET).upload(storagePath, item.file, { cacheControl: '3600', upsert: false });
         if (upErr) throw upErr;
         const { data: urlData } = supaClient.storage.from(BUCKET).getPublicUrl(storagePath);
         imageUrl = urlData.publicUrl;
+      } else {
+        imageUrl = item.url;
       }
       const { error } = await supaClient.from(TABLE).insert({
-        title, description, author: author || 'unknown',
-        tags_json: JSON.stringify(selectedItemTags), image_url: imageUrl, storage_path: storagePath,
+        title: item.type === 'file' ? item.file.name.replace(/\.[^.]+$/, '') : '',
+        description: '', author,
+        tags_json: JSON.stringify(tags),
+        image_url: imageUrl, storage_path: storagePath,
       });
       if (error) throw error;
-      showToast(mode === 'link' ? '已添加' : '已上传');
+      done++;
+    } catch(e) {
+      console.error('批量上传失败:', e);
+      failed++; done++;
     }
-    await fetchAll();
-    setSyncStatus('ok');
-  } catch(e) { dbError('保存图片', e); }
+  }
+
+  progressBar.style.width = '100%';
+  progressText.textContent = failed
+    ? `完成：${done - failed} 张成功，${failed} 张失败`
+    : `✅ 全部 ${done} 张完成`;
+
+  cancelBtn.disabled = false;
+  setSyncStatus('ok');
+  await fetchAll();
+  showToast(failed ? `${failed} 张失败` : `✅ ${done} 张已上传`);
+  if (!failed) setTimeout(() => closeModal(container), 1000);
+  else saveBtn.disabled = false;
 }
 
 async function deleteFromModal(container) {
@@ -710,134 +775,6 @@ async function deleteTag(tag, tagListEl) {
   } catch(e) { dbError('删除标签', e); }
 }
 
-// ── Batch upload ──────────────────────────────────────
-
-let batchFiles = [];
-
-function openBatchModal(container) {
-  batchFiles = [];
-  container.querySelector('#gal-batch-input').value = '';
-  container.querySelector('#gal-batch-preview').style.display = 'none';
-  container.querySelector('#gal-batch-thumbs').innerHTML = '';
-  container.querySelector('#gal-batch-count').textContent = '';
-  container.querySelector('#gal-batch-author').value = '';
-  container.querySelector('#gal-batch-progress').style.display = 'none';
-  container.querySelector('#gal-batch-upload-btn').disabled = true;
-  renderBatchTagPicker(container, []);
-  container.querySelector('#gal-batch-modal').classList.add('show');
-}
-
-function closeBatchModal(container) {
-  container.querySelector('#gal-batch-modal').classList.remove('show');
-  batchFiles = [];
-}
-
-function handleBatchFiles(files, container) {
-  batchFiles = files;
-  const thumbs = container.querySelector('#gal-batch-thumbs');
-  thumbs.innerHTML = '';
-  files.forEach(file => {
-    const wrap = document.createElement('div');
-    wrap.style.cssText = 'position:relative;width:72px;height:72px;flex-shrink:0';
-    const img = document.createElement('img');
-    img.style.cssText = 'width:72px;height:72px;object-fit:cover;border-radius:6px;border:1px solid var(--border)';
-    img.src = URL.createObjectURL(file);
-    const name = document.createElement('div');
-    name.style.cssText = 'position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,.6);color:#fff;font-size:9px;padding:2px 3px;border-radius:0 0 6px 6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap';
-    name.textContent = file.name;
-    wrap.appendChild(img);
-    wrap.appendChild(name);
-    thumbs.appendChild(wrap);
-  });
-  container.querySelector('#gal-batch-count').textContent = `已选 ${files.length} 张图片`;
-  container.querySelector('#gal-batch-preview').style.display = '';
-  container.querySelector('#gal-batch-upload-btn').disabled = files.length === 0;
-}
-
-function renderBatchTagPicker(container, selectedItemTags) {
-  const picker = container.querySelector('#gal-batch-tag-picker');
-  picker.innerHTML = tags.map(tag => `
-    <label style="display:inline-flex;align-items:center;gap:4px;margin:0 6px 6px 0;cursor:pointer;font-size:13px">
-      <input type="checkbox" value="${escHtml(tag)}" ${selectedItemTags.includes(tag) ? 'checked' : ''}/>
-      ${escHtml(tag)}
-    </label>`).join('');
-}
-
-function addBatchTag(container) {
-  const input = container.querySelector('#gal-batch-new-tag');
-  const newTag = input.value.trim();
-  if (!newTag) return;
-  if (!tags.includes(newTag)) tags.push(newTag);
-  input.value = '';
-  const picker = container.querySelector('#gal-batch-tag-picker');
-  const current = Array.from(picker.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
-  renderBatchTagPicker(container, [...current, newTag]);
-}
-
-async function runBatchUpload(container) {
-  if (!batchFiles.length) return;
-
-  const author = container.querySelector('#gal-batch-author').value.trim() || 'unknown';
-  const selectedItemTags = Array.from(
-    container.querySelectorAll('#gal-batch-tag-picker input[type="checkbox"]:checked')
-  ).map(cb => cb.value);
-
-  const total = batchFiles.length;
-  let done = 0;
-  let failed = 0;
-
-  const uploadBtn = container.querySelector('#gal-batch-upload-btn');
-  const cancelBtn = container.querySelector('#gal-batch-cancel-btn');
-  const progressWrap = container.querySelector('#gal-batch-progress');
-  const progressText = container.querySelector('#gal-batch-progress-text');
-  const progressBar = container.querySelector('#gal-batch-progress-bar');
-
-  uploadBtn.disabled = true;
-  cancelBtn.disabled = true;
-  progressWrap.style.display = '';
-  setSyncStatus('syncing');
-
-  for (const file of batchFiles) {
-    progressText.textContent = `上传中 ${done + 1} / ${total}：${file.name}`;
-    progressBar.style.width = `${Math.round((done / total) * 100)}%`;
-    try {
-      const ext = file.name.split('.').pop();
-      const storagePath = `${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
-      const { error: upErr } = await supaClient.storage.from(BUCKET).upload(storagePath, file, {
-        cacheControl: '3600', upsert: false
-      });
-      if (upErr) throw upErr;
-      const { data: urlData } = supaClient.storage.from(BUCKET).getPublicUrl(storagePath);
-      const { error: dbErr } = await supaClient.from(TABLE).insert({
-        title: file.name.replace(/\.[^.]+$/, ''), // filename without extension as default title
-        description: '',
-        author,
-        tags_json: JSON.stringify(selectedItemTags),
-        image_url: urlData.publicUrl,
-        storage_path: storagePath,
-      });
-      if (dbErr) throw dbErr;
-      done++;
-    } catch(e) {
-      console.error('批量上传失败:', file.name, e);
-      failed++;
-      done++;
-    }
-  }
-
-  progressBar.style.width = '100%';
-  progressText.textContent = failed
-    ? `完成：${done - failed} 张成功，${failed} 张失败`
-    : `✅ 全部 ${done} 张上传成功`;
-
-  cancelBtn.disabled = false;
-  setSyncStatus('ok');
-  await fetchAll();
-
-  showToast(failed ? `上传完成，${failed} 张失败` : `✅ ${done} 张图片已上传`);
-  if (!failed) setTimeout(() => closeBatchModal(container), 1200);
-}
-
 function updateSortButton(container) {
   const btn = container.querySelector('#gal-sort-btn');
   if (!btn) return;
@@ -845,11 +782,8 @@ function updateSortButton(container) {
 }
 
 function updateGalleryUI(container) {
-  const editor = isEditor();
   const addBtn = container.querySelector('#gal-add-btn');
-  const batchBtn = container.querySelector('#gal-batch-btn');
-  if (addBtn) addBtn.style.display = editor ? '' : 'none';
-  if (batchBtn) batchBtn.style.display = editor ? '' : 'none';
+  if (addBtn) addBtn.style.display = isEditor() ? '' : 'none';
   renderTagList(container.querySelector('#gal-tag-list'));
   renderGrid(container);
 }
