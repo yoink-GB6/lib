@@ -146,7 +146,7 @@ function buildHTML() {
     <input id="gal-author" type="text" placeholder="作者名..." autocomplete="off" style="margin-bottom:12px"/>
 
     <label>标签</label>
-    <div id="gal-tag-picker" style="margin-bottom:8px"></div>
+    <div id="gal-tag-picker" class="lib-tag-picker" style="margin-bottom:8px"></div>
     <div style="display:flex;gap:8px;margin-bottom:16px">
       <input id="gal-new-tag" type="text" placeholder="新增标签..." autocomplete="off"
         style="flex:1;padding:8px 12px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);font-size:13px"/>
@@ -465,7 +465,7 @@ function renderGrid(container) {
   grid.innerHTML = filtered.map(item => {
     const tagsHtml = item.tags.map(t => `<span class="lib-item-tag">${escHtml(t)}</span>`).join('');
     const titleHtml = item.title ? `<div class="gal-item-title">${escHtml(item.title)}</div>` : '';
-    const authorHtml = item.author && item.author !== 'unknown'
+    const authorHtml = item.author
       ? `<div class="lib-item-author" style="padding:0 8px 8px;font-size:11px;color:var(--muted)">by ${escHtml(item.author)}</div>` : '';
     const editOverlay = editor
       ? `<div class="gal-edit-overlay"><span>✏️ 编辑</span></div>` : '';
@@ -573,10 +573,15 @@ function switchUploadMode(container, mode) {
 
 function renderTagPicker(container, selectedItemTags) {
   const picker = container.querySelector('#gal-tag-picker');
-  picker.innerHTML = tags.map(tag => `
-    <label style="display:inline-flex;align-items:center;gap:4px;margin:0 6px 6px 0;cursor:pointer;font-size:13px">
+  if (!tags.length && !selectedItemTags.length) {
+    picker.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:4px 0">暂无标签，请先添加</div>';
+    return;
+  }
+  const allTags = Array.from(new Set([...tags, ...selectedItemTags])).sort();
+  picker.innerHTML = allTags.map(tag => `
+    <label class="lib-tag-checkbox">
       <input type="checkbox" value="${escHtml(tag)}" ${selectedItemTags.includes(tag) ? 'checked' : ''}/>
-      ${escHtml(tag)}
+      <span>${escHtml(tag)}</span>
     </label>`).join('');
 }
 
@@ -594,7 +599,7 @@ function addNewTag(container) {
 async function saveItem(container) {
   const title = container.querySelector('#gal-title').value.trim();
   const description = container.querySelector('#gal-desc').value.trim();
-  const author = container.querySelector('#gal-author').value.trim() || 'unknown';
+  const author = container.querySelector('#gal-author').value.trim();
   const selectedItemTags = Array.from(container.querySelectorAll('#gal-tag-picker input[type="checkbox"]:checked')).map(cb => cb.value);
   const savingId = editItemId;
 
