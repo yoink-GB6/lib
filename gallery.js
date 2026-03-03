@@ -465,7 +465,7 @@ function renderGrid(container) {
   grid.innerHTML = filtered.map(item => {
     const tagsHtml = item.tags.map(t => `<span class="lib-item-tag">${escHtml(t)}</span>`).join('');
     const titleHtml = item.title ? `<div class="gal-item-title">${escHtml(item.title)}</div>` : '';
-    const authorHtml = item.author
+    const authorHtml = item.author && item.author !== 'unknown'
       ? `<div class="lib-item-author" style="padding:0 8px 8px;font-size:11px;color:var(--muted)">by ${escHtml(item.author)}</div>` : '';
     const editOverlay = editor
       ? `<div class="gal-edit-overlay"><span>✏️ 编辑</span></div>` : '';
@@ -511,7 +511,8 @@ function openModal(item, container) {
   container.querySelector('#gal-modal-title').textContent = isEdit ? '编辑图片' : '新建';
   container.querySelector('#gal-title').value = item?.title || '';
   container.querySelector('#gal-desc').value = item?.description || '';
-  container.querySelector('#gal-author').value = item?.author || '';
+  const currentAuthor = item?.author || '';
+  container.querySelector('#gal-author').value = currentAuthor === 'unknown' ? '' : currentAuthor;
 
   const uploadMode = container.querySelector('#gal-upload-mode');
   if (uploadMode) uploadMode.style.display = isEdit ? 'none' : '';
@@ -541,10 +542,13 @@ function openModal(item, container) {
     }
   }
 
-  // Edit mode: show existing image preview
+  // Edit mode: show single-fields + existing image preview
   if (isEdit) {
+    container.querySelector('#gal-single-fields').style.display = '';
     container.querySelector('#gal-preview-wrap').style.display = '';
     container.querySelector('#gal-preview-img').src = item.imageUrl;
+    container.querySelector('#gal-upload-progress').style.display = 'none';
+    container.querySelector('#gal-save-btn').disabled = false;
   }
 
   renderTagPicker(container, item?.tags || []);
@@ -599,7 +603,7 @@ function addNewTag(container) {
 async function saveItem(container) {
   const title = container.querySelector('#gal-title').value.trim();
   const description = container.querySelector('#gal-desc').value.trim();
-  const author = container.querySelector('#gal-author').value.trim();
+  const author = container.querySelector('#gal-author').value.trim() || 'unknown';
   const selectedItemTags = Array.from(container.querySelectorAll('#gal-tag-picker input[type="checkbox"]:checked')).map(cb => cb.value);
   const savingId = editItemId;
 
