@@ -465,7 +465,7 @@ function renderGrid(container) {
   grid.innerHTML = filtered.map(item => {
     const tagsHtml = item.tags.map(t => `<span class="lib-item-tag">${escHtml(t)}</span>`).join('');
     const titleHtml = item.title ? `<div class="gal-item-title">${escHtml(item.title)}</div>` : '';
-    const authorHtml = item.author && item.author !== 'unknown'
+    const authorHtml = item.author
       ? `<div class="lib-item-author" style="padding:0 8px 8px;font-size:11px;color:var(--muted)">by ${escHtml(item.author)}</div>` : '';
     const editOverlay = editor
       ? `<div class="gal-edit-overlay"><span>✏️ 编辑</span></div>` : '';
@@ -511,8 +511,7 @@ function openModal(item, container) {
   container.querySelector('#gal-modal-title').textContent = isEdit ? '编辑图片' : '新建';
   container.querySelector('#gal-title').value = item?.title || '';
   container.querySelector('#gal-desc').value = item?.description || '';
-  const currentAuthor = item?.author || '';
-  container.querySelector('#gal-author').value = currentAuthor === 'unknown' ? '' : currentAuthor;
+  container.querySelector('#gal-author').value = item?.author || 'unknown';
 
   const uploadMode = container.querySelector('#gal-upload-mode');
   if (uploadMode) uploadMode.style.display = isEdit ? 'none' : '';
