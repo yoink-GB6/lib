@@ -325,11 +325,7 @@ function openReadModal(item, container) {
   if (item.tags.length) meta.push(item.tags.map(t => `<span class="lib-item-tag">${escHtml(t)}</span>`).join(''));
   container.querySelector('#arc-read-meta').innerHTML = meta.join('');
 
-  // Render body: preserve line breaks, basic paragraph spacing
-  const bodyHtml = escHtml(item.body)
-    .replace(/\n{2,}/g, '</p><p class="arc-para">')
-    .replace(/\n/g, '<br>');
-  container.querySelector('#arc-read-body').innerHTML = `<p class="arc-para">${bodyHtml}</p>`;
+  container.querySelector('#arc-read-body').innerHTML = renderMarkdown(item.body);
 
   // Actions
   const actions = container.querySelector('#arc-read-actions');
@@ -485,4 +481,131 @@ function updateArticlesUI(container) {
   if (addBtn) addBtn.style.display = isEditor() ? '' : 'none';
   renderTagList(container.querySelector('#arc-tag-list'));
   renderGrid(container);
+}
+
+// ── Markdown renderer ──────────────────────────────
+function renderMarkdown(raw) {
+  const lines = raw.split('\n');
+  const out = [];
+  let i = 0;
+
+  // Inline: bold, italic, code, links, strikethrough, hr within text
+  function inlineHtml(text) {
+    // Allow passthrough of raw HTML tags (user-supplied)
+    return text
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      // restore allowed html tags after escaping (basic allowlist)
+      .replace(/&lt;(\/?(b|i|u|s|em|strong|mark|sub|sup|br|span|a|code|small|del|ins)[^&]*)&gt;/gi, '<$1>')
+      // code span (before bold/italic to avoid conflicts)
+      .replace(/`([^`]+)`/g, '<code class="arc-inline-code">$1</code>')
+      // bold+italic
+      .replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>')
+      // bold
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/__(.+?)__/g, '<strong>$1</strong>')
+      // italic
+      .replace(/\*([^*\n]+?)\*/g, '<em>$1</em>')
+      .replace(/_([^_\n]+?)_/g, '<em>$1</em>')
+      // strikethrough
+      .replace(/~~(.+?)~~/g, '<del>$1</del>')
+      // links [text](url)
+      .replace(/\[([^\]]+)\]\((https?:\/\/[^\)]+)\)/g, '<a href="$2" target="_blank" rel="noopener" class="arc-link">$1</a>')
+      // bare urls
+      .replace(/(^|[\s])((https?:\/\/)[^\s<]+)/g, '$1<a href="$2" target="_blank" rel="noopener" class="arc-link">$2</a>');
+  }
+
+  function flushPara(buf) {
+    if (!buf.length) return;
+    out.push(`<p class="arc-para">${inlineHtml(buf.join('\n'))}</p>`);
+  }
+
+  let paraBuf = [];
+  let inCodeBlock = false;
+  let codeLang = '';
+  let codeBuf = [];
+
+  while (i < lines.length) {
+    const line = lines[i];
+
+    // Fenced code block
+    if (/^```/.test(line)) {
+      if (!inCodeBlock) {
+        flushPara(paraBuf); paraBuf = [];
+        codeLang = line.slice(3).trim();
+        inCodeBlock = true; codeBuf = [];
+      } else {
+        const langClass = codeLang ? ` class="language-${escHtml(codeLang)}"` : '';
+        out.push(`<pre class="arc-code-block"><code${langClass}>${codeBuf.map(l => escHtml(l)).join('\n')}</code></pre>`);
+        inCodeBlock = false; codeLang = ''; codeBuf = [];
+      }
+      i++; continue;
+    }
+    if (inCodeBlock) { codeBuf.push(line); i++; continue; }
+
+    // Heading
+    const hm = line.match(/^(#{1,6})\s+(.+)$/);
+    if (hm) {
+      flushPara(paraBuf); paraBuf = [];
+      const lvl = hm[1].length;
+      out.push(`<h${lvl} class="arc-h${lvl}">${inlineHtml(hm[2])}</h${lvl}>`);
+      i++; continue;
+    }
+
+    // Horizontal rule
+    if (/^(-{3,}|\*{3,}|_{3,})$/.test(line.trim())) {
+      flushPara(paraBuf); paraBuf = [];
+      out.push('<hr class="arc-hr"/>');
+      i++; continue;
+    }
+
+    // Blockquote
+    if (/^>\s?/.test(line)) {
+      flushPara(paraBuf); paraBuf = [];
+      const qlines = [];
+      while (i < lines.length && /^>\s?/.test(lines[i])) {
+        qlines.push(lines[i].replace(/^>\s?/, ''));
+        i++;
+      }
+      out.push(`<blockquote class="arc-blockquote">${inlineHtml(qlines.join('\n'))}</blockquote>`);
+      continue;
+    }
+
+    // Unordered list
+    if (/^[-*+]\s/.test(line)) {
+      flushPara(paraBuf); paraBuf = [];
+      out.push('<ul class="arc-ul">');
+      while (i < lines.length && /^[-*+]\s/.test(lines[i])) {
+        out.push(`<li>${inlineHtml(lines[i].replace(/^[-*+]\s/, ''))}</li>`);
+        i++;
+      }
+      out.push('</ul>'); continue;
+    }
+
+    // Ordered list
+    if (/^\d+\.\s/.test(line)) {
+      flushPara(paraBuf); paraBuf = [];
+      out.push('<ol class="arc-ol">');
+      while (i < lines.length && /^\d+\.\s/.test(lines[i])) {
+        out.push(`<li>${inlineHtml(lines[i].replace(/^\d+\.\s/, ''))}</li>`);
+        i++;
+      }
+      out.push('</ol>'); continue;
+    }
+
+    // Blank line = paragraph break
+    if (line.trim() === '') {
+      flushPara(paraBuf); paraBuf = [];
+      i++; continue;
+    }
+
+    // Normal line → accumulate into paragraph
+    paraBuf.push(line);
+    i++;
+  }
+
+  if (inCodeBlock) {
+    out.push(`<pre class="arc-code-block"><code>${codeBuf.map(l => escHtml(l)).join('\n')}</code></pre>`);
+  }
+  flushPara(paraBuf);
+  return out.join('\n');
 }
