@@ -403,6 +403,32 @@ function renderTagList(tagListEl) {
 
   
 
+async function copyText(text) {
+  // Try modern clipboard API first
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch(e) {
+      // Fall through to execCommand fallback
+    }
+  }
+  // Fallback: execCommand (works even without focus)
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.cssText = 'position:fixed;top:-9999px;left:-9999px;opacity:0';
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    const ok = document.execCommand('copy');
+    document.body.removeChild(ta);
+    return ok;
+  } catch(e) {
+    return false;
+  }
+}
+
 function renderGrid(container) {
   const grid = container.querySelector('#lib-grid');
   
@@ -563,11 +589,8 @@ function renderGrid(container) {
         openModal(item, pageContainer);
       } else {
 
-        const contentToCopy = item.content;
-        navigator.clipboard.writeText(contentToCopy).then(() => {
-          showToast('已复制到剪贴板');
-        }).catch(() => {
-          showToast('复制失败，请手动复制');
+        copyText(item.content).then(ok => {
+          showToast(ok ? '已复制到剪贴板' : '复制失败，请手动复制');
         });
       }
     };
@@ -643,11 +666,9 @@ function closePreviewModal(container) {
 function copyFromPreview(container) {
   if (!previewItem) return;
   
-  navigator.clipboard.writeText(previewItem.content).then(() => {
-    showToast('已复制到剪贴板');
-    closePreviewModal(container);
-  }).catch(() => {
-    showToast('复制失败，请手动复制');
+  copyText(previewItem.content).then(ok => {
+    if (ok) { showToast('已复制到剪贴板'); closePreviewModal(container); }
+    else showToast('复制失败，请手动复制');
   });
 }
 
