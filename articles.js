@@ -394,13 +394,25 @@ function openReadModal(item, container) {
   const modal = container.querySelector('#arc-read-modal');
   const inner = modal.querySelector('.tl-modal.arc-read-tl');
 
-  // Apply background image
+  // Background: use a fixed full-screen div behind the modal overlay
+  let bgDiv = container.querySelector('#arc-bg-layer');
+  if (!bgDiv) {
+    bgDiv = document.createElement('div');
+    bgDiv.id = 'arc-bg-layer';
+    bgDiv.className = 'arc-read-overlay-bg';
+    bgDiv.style.display = 'none';
+    document.body.appendChild(bgDiv);
+  }
+
   if (item.bgImageUrl) {
-    inner.style.setProperty('--arc-bg-img', `url('${item.bgImageUrl}')`);
-    inner.classList.add('arc-has-bg');
+    bgDiv.style.backgroundImage = `url('${item.bgImageUrl}')`;
+    bgDiv.style.filter = 'blur(0px)';
+    bgDiv.style.display = '';
+    inner.style.background = 'rgba(0,0,0,0.45)';
+    inner.style.backdropFilter = 'none';
   } else {
-    inner.style.removeProperty('--arc-bg-img');
-    inner.classList.remove('arc-has-bg');
+    bgDiv.style.display = 'none';
+    inner.style.background = '';
   }
 
   container.querySelector('#arc-read-title').textContent = item.title || '（无标题）';
@@ -439,13 +451,23 @@ function openReadModal(item, container) {
 }
 
 function applyBgFilters(inner, brightness, blur) {
-  inner.style.setProperty('--arc-bg-opacity', ((100 - brightness) / 100 * 0.88).toFixed(3));
-  inner.style.setProperty('--arc-bg-blur', blur + 'px');
+  const bgDiv = document.querySelector('#arc-bg-layer');
+  if (bgDiv) {
+    bgDiv.style.filter = `blur(${blur}px)`;
+    bgDiv.style.setProperty('--arc-bg-opacity', ((100 - brightness) / 100 * 0.88).toFixed(3));
+  }
+  // Also darken the modal inner background
+  if (inner) {
+    const opacity = ((100 - brightness) / 100 * 0.75 + 0.1).toFixed(2);
+    inner.style.background = `rgba(0,0,0,${opacity})`;
+  }
 }
 
 function closeReadModal(container) {
   container.querySelector('#arc-read-modal').classList.remove('show');
   container.querySelector('#arc-read-sliders').style.display = 'none';
+  const bgDiv = document.querySelector('#arc-bg-layer');
+  if (bgDiv) bgDiv.style.display = 'none';
 }
 
 function openModal(item, container) {
