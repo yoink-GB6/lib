@@ -92,6 +92,18 @@ function buildHTML() {
     <label>作者（可选）</label>
     <input id="arc-author" type="text" placeholder="作者名..." autocomplete="off" style="margin-bottom:12px"/>
 
+    <label>背景图片（可选）</label>
+    <input id="arc-bg-url" type="hidden"/>
+    <div id="arc-bg-preview-wrap" style="margin-bottom:8px;display:none;position:relative">
+      <img id="arc-bg-preview-img" style="width:100%;max-height:120px;object-fit:cover;border-radius:8px;border:1px solid var(--border)"/>
+      <button id="arc-bg-clear-btn" style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,.6);border:1px solid #555;color:#fff;width:24px;height:24px;border-radius:50%;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center">✕</button>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:16px">
+      <button class="btn bn" id="arc-bg-gallery-btn" style="flex:1;font-size:12px">🖼 从图库选择</button>
+      <button class="btn bn" id="arc-bg-upload-btn" style="flex:1;font-size:12px">📁 上传新图片</button>
+      <input id="arc-bg-file-input" type="file" accept="image/*" style="display:none"/>
+    </div>
+
     <label>标签</label>
     <div id="arc-tag-picker" class="lib-tag-picker" style="margin-bottom:8px"></div>
     <div style="display:flex;gap:8px;margin-bottom:16px">
@@ -119,6 +131,30 @@ function buildHTML() {
     <div id="arc-read-body" class="arc-read-body"></div>
     <div id="arc-read-actions" style="display:flex;gap:8px;justify-content:flex-end;margin-top:20px;padding-top:14px;border-top:1px solid var(--border)"></div>
   </div>
+</div>
+
+<!-- Gallery picker modal -->
+<div id="arc-gallery-picker" class="tl-modal-overlay">
+  <div class="tl-modal" style="max-width:700px" onmousedown="event.stopPropagation()">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <h2 style="color:var(--accent);margin:0">选择背景图片</h2>
+      <button id="arc-gallery-picker-close" style="background:none;border:none;color:#889;cursor:pointer;font-size:22px;padding:0;line-height:1">✕</button>
+    </div>
+    <div id="arc-gallery-picker-grid"
+      style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;max-height:420px;overflow-y:auto;padding:2px"></div>
+  </div>
+</div>
+
+<!-- Bg filter sliders (fixed overlay, shown when reading with bg image) -->
+<div id="arc-read-sliders" style="display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+  background:rgba(0,0,0,.65);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.12);
+  border-radius:12px;padding:10px 18px;gap:20px;align-items:center;z-index:10001;white-space:nowrap">
+  <label style="font-size:11px;color:#aaa;display:flex;align-items:center;gap:8px">
+    ☀️ <input id="arc-brightness" type="range" min="0" max="100" value="40" style="width:110px;accent-color:var(--accent)"/>
+  </label>
+  <label style="font-size:11px;color:#aaa;display:flex;align-items:center;gap:8px">
+    🌫️ <input id="arc-blur" type="range" min="0" max="20" value="0" style="width:110px;accent-color:var(--accent)"/>
+  </label>
 </div>
 `;
 }
@@ -176,6 +212,36 @@ function bindControls(container) {
 
   // Modal
   container.querySelector('#arc-cancel-btn').addEventListener('click', () => closeModal(container));
+
+  // Bg image controls
+  container.querySelector('#arc-bg-gallery-btn').addEventListener('click', () => openGalleryPicker(container));
+  container.querySelector('#arc-bg-upload-btn').addEventListener('click', () => container.querySelector('#arc-bg-file-input').click());
+  container.querySelector('#arc-bg-file-input').addEventListener('change', async e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    showToast('上传中...');
+    try {
+      const ext = file.name.split('.').pop();
+      const path = `${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+      const { error: upErr } = await supaClient.storage.from('gallery').upload(path, file, { cacheControl: '3600', upsert: false });
+      if (upErr) throw upErr;
+      const { data } = supaClient.storage.from('gallery').getPublicUrl(path);
+      await supaClient.from('gallery_items').insert({ title: '', description: '', author: 'unknown', tags_json: '[]', image_url: data.publicUrl, storage_path: path });
+      container.querySelector('#arc-bg-url').value = data.publicUrl;
+      updateBgPreview(container, data.publicUrl);
+      showToast('已上传并设为背景图');
+    } catch(err) { dbError('上传背景图', err); }
+  });
+  container.querySelector('#arc-bg-clear-btn').addEventListener('click', () => {
+    container.querySelector('#arc-bg-url').value = '';
+    updateBgPreview(container, '');
+  });
+  container.querySelector('#arc-gallery-picker-close').addEventListener('click', () => {
+    container.querySelector('#arc-gallery-picker').classList.remove('show');
+  });
+  container.querySelector('#arc-gallery-picker').addEventListener('mousedown', e => {
+    if (e.target === container.querySelector('#arc-gallery-picker')) container.querySelector('#arc-gallery-picker').classList.remove('show');
+  });
   container.querySelector('#arc-modal').addEventListener('mousedown', e => {
     if (e.target === container.querySelector('#arc-modal')) closeModal(container);
   });
@@ -191,6 +257,14 @@ function bindControls(container) {
   container.querySelector('#arc-read-modal').addEventListener('mousedown', e => {
     if (e.target === container.querySelector('#arc-read-modal')) closeReadModal(container);
   });
+  container.querySelector('#arc-brightness').addEventListener('input', () => {
+    const inner = container.querySelector('.tl-modal.arc-read-tl');
+    applyBgFilters(inner, +container.querySelector('#arc-brightness').value, +container.querySelector('#arc-blur').value);
+  });
+  container.querySelector('#arc-blur').addEventListener('input', () => {
+    const inner = container.querySelector('.tl-modal.arc-read-tl');
+    applyBgFilters(inner, +container.querySelector('#arc-brightness').value, +container.querySelector('#arc-blur').value);
+  });
 }
 
 async function fetchAll() {
@@ -204,6 +278,7 @@ async function fetchAll() {
       body: r.body || '',
       author: r.author || '',
       tags: JSON.parse(r.tags_json || '[]'),
+      bgImageUrl: r.bg_image_url || '',
       createdAt: r.created_at,
       updatedAt: r.updated_at,
     }));
@@ -316,6 +391,18 @@ function renderGrid(container) {
 }
 
 function openReadModal(item, container) {
+  const modal = container.querySelector('#arc-read-modal');
+  const inner = modal.querySelector('.tl-modal.arc-read-tl');
+
+  // Apply background image
+  if (item.bgImageUrl) {
+    inner.style.setProperty('--arc-bg-img', `url('${item.bgImageUrl}')`);
+    inner.classList.add('arc-has-bg');
+  } else {
+    inner.style.removeProperty('--arc-bg-img');
+    inner.classList.remove('arc-has-bg');
+  }
+
   container.querySelector('#arc-read-title').textContent = item.title || '（无标题）';
   const date = new Date(item.createdAt).toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' });
   const meta = [];
@@ -324,8 +411,18 @@ function openReadModal(item, container) {
   meta.push(`<span>📝 ${item.body.length.toLocaleString()} 字</span>`);
   if (item.tags.length) meta.push(item.tags.map(t => `<span class="lib-item-tag">${escHtml(t)}</span>`).join(''));
   container.querySelector('#arc-read-meta').innerHTML = meta.join('');
-
   container.querySelector('#arc-read-body').innerHTML = renderMarkdown(item.body);
+
+  // Sliders
+  const sliders = container.querySelector('#arc-read-sliders');
+  if (item.bgImageUrl) {
+    sliders.style.display = 'flex';
+    container.querySelector('#arc-brightness').value = 40;
+    container.querySelector('#arc-blur').value = 0;
+    applyBgFilters(inner, 40, 0);
+  } else {
+    sliders.style.display = 'none';
+  }
 
   // Actions
   const actions = container.querySelector('#arc-read-actions');
@@ -338,11 +435,17 @@ function openReadModal(item, container) {
     actions.appendChild(editBtn);
   }
 
-  container.querySelector('#arc-read-modal').classList.add('show');
+  modal.classList.add('show');
+}
+
+function applyBgFilters(inner, brightness, blur) {
+  inner.style.setProperty('--arc-bg-opacity', ((100 - brightness) / 100 * 0.88).toFixed(3));
+  inner.style.setProperty('--arc-bg-blur', blur + 'px');
 }
 
 function closeReadModal(container) {
   container.querySelector('#arc-read-modal').classList.remove('show');
+  container.querySelector('#arc-read-sliders').style.display = 'none';
 }
 
 function openModal(item, container) {
@@ -351,6 +454,8 @@ function openModal(item, container) {
   container.querySelector('#arc-title').value = item?.title || '';
   container.querySelector('#arc-body').value = item?.body || '';
   container.querySelector('#arc-author').value = item?.author || '';
+  container.querySelector('#arc-bg-url').value = item?.bgImageUrl || '';
+  updateBgPreview(container, item?.bgImageUrl || '');
 
   // Update char count
   const len = (item?.body || '').length;
@@ -407,7 +512,8 @@ async function saveItem(container) {
   closeModal(container);
   setSyncStatus('syncing');
   try {
-    const row = { title, body, author: author || 'unknown', tags_json: JSON.stringify(selectedItemTags) };
+    const bgImageUrl = container.querySelector('#arc-bg-url').value.trim();
+    const row = { title, body, author: author || 'unknown', tags_json: JSON.stringify(selectedItemTags), bg_image_url: bgImageUrl };
     if (savingId) {
       const { error } = await supaClient.from(TABLE).update(row).eq('id', savingId);
       if (error) throw error;
@@ -468,6 +574,48 @@ async function deleteTag(tag, tagListEl) {
     await fetchAll();
     setSyncStatus('ok');
   } catch(e) { dbError('删除标签', e); }
+}
+
+function updateBgPreview(container, url) {
+  const wrap = container.querySelector('#arc-bg-preview-wrap');
+  if (url) {
+    container.querySelector('#arc-bg-preview-img').src = url;
+    wrap.style.display = '';
+  } else {
+    container.querySelector('#arc-bg-preview-img').src = '';
+    wrap.style.display = 'none';
+  }
+}
+
+async function openGalleryPicker(container) {
+  const grid = container.querySelector('#arc-gallery-picker-grid');
+  grid.innerHTML = '<div style="color:#889;font-size:13px;padding:20px;grid-column:1/-1;text-align:center">加载中...</div>';
+  container.querySelector('#arc-gallery-picker').classList.add('show');
+  try {
+    const { data, error } = await supaClient.from('gallery_items').select('id,image_url,title,tags_json').order('created_at', { ascending: false });
+    if (error) throw error;
+    const bgImages = (data || []).filter(img => {
+      try { return JSON.parse(img.tags_json || '[]').includes('background'); } catch { return false; }
+    });
+    if (!bgImages.length) {
+      grid.innerHTML = '<div style="color:#889;font-size:13px;padding:20px;grid-column:1/-1;text-align:center">图库中暂无标签为「background」的图片</div>';
+      return;
+    }
+    grid.innerHTML = bgImages.map(img => `
+      <div class="arc-pick-item" data-url="${escHtml(img.image_url)}"
+        style="cursor:pointer;border-radius:8px;overflow:hidden;border:2px solid transparent;transition:border-color .15s;aspect-ratio:1;background:#111">
+        <img src="${escHtml(img.image_url)}" style="width:100%;height:100%;object-fit:cover" loading="lazy"/>
+      </div>`).join('');
+    grid.querySelectorAll('.arc-pick-item').forEach(el => {
+      el.addEventListener('click', () => {
+        container.querySelector('#arc-bg-url').value = el.dataset.url;
+        updateBgPreview(container, el.dataset.url);
+        container.querySelector('#arc-gallery-picker').classList.remove('show');
+      });
+      el.addEventListener('mouseenter', () => el.style.borderColor = 'var(--accent)');
+      el.addEventListener('mouseleave', () => el.style.borderColor = 'transparent');
+    });
+  } catch(e) { dbError('加载图库', e); }
 }
 
 function updateSortButton(container) {
