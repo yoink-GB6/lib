@@ -150,7 +150,7 @@ function buildHTML() {
   background:rgba(0,0,0,.65);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.12);
   border-radius:12px;padding:10px 18px;gap:20px;align-items:center;z-index:10001;white-space:nowrap">
   <label style="font-size:11px;color:#aaa;display:flex;align-items:center;gap:8px">
-    ☀️ <input id="arc-brightness" type="range" min="0" max="100" value="40" style="width:110px;accent-color:var(--accent)"/>
+    ☀️ <input id="arc-brightness" type="range" min="0" max="100" value="100" style="width:110px;accent-color:var(--accent)"/>
   </label>
   <label style="font-size:11px;color:#aaa;display:flex;align-items:center;gap:8px">
     🌫️ <input id="arc-blur" type="range" min="0" max="20" value="0" style="width:110px;accent-color:var(--accent)"/>
@@ -424,9 +424,9 @@ function openReadModal(item, container) {
   const sliders = container.querySelector('#arc-read-sliders');
   if (item.bgImageUrl) {
     sliders.style.display = 'flex';
-    container.querySelector('#arc-brightness').value = 40;
+    container.querySelector('#arc-brightness').value = 100;
     container.querySelector('#arc-blur').value = 0;
-    applyBgFilters(container, 40, 0);
+    applyBgFilters(container, 100, 0);
   } else {
     sliders.style.display = 'none';
   }
