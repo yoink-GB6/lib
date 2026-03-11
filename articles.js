@@ -258,12 +258,10 @@ function bindControls(container) {
     if (e.target === container.querySelector('#arc-read-modal')) closeReadModal(container);
   });
   container.querySelector('#arc-brightness').addEventListener('input', () => {
-    const inner = container.querySelector('.tl-modal.arc-read-tl');
-    applyBgFilters(inner, +container.querySelector('#arc-brightness').value, +container.querySelector('#arc-blur').value);
+    applyBgFilters(container, +container.querySelector('#arc-brightness').value, +container.querySelector('#arc-blur').value);
   });
   container.querySelector('#arc-blur').addEventListener('input', () => {
-    const inner = container.querySelector('.tl-modal.arc-read-tl');
-    applyBgFilters(inner, +container.querySelector('#arc-brightness').value, +container.querySelector('#arc-blur').value);
+    applyBgFilters(container, +container.querySelector('#arc-brightness').value, +container.querySelector('#arc-blur').value);
   });
 }
 
@@ -394,24 +392,14 @@ function openReadModal(item, container) {
   const modal = container.querySelector('#arc-read-modal');
   const inner = modal.querySelector('.tl-modal.arc-read-tl');
 
-  // Background: use a fixed full-screen div behind the modal overlay
-  let bgDiv = container.querySelector('#arc-bg-layer');
-  if (!bgDiv) {
-    bgDiv = document.createElement('div');
-    bgDiv.id = 'arc-bg-layer';
-    bgDiv.className = 'arc-read-overlay-bg';
-    bgDiv.style.display = 'none';
-    document.body.appendChild(bgDiv);
-  }
-
+  // Background: set directly on the overlay (which is already full-screen)
   if (item.bgImageUrl) {
-    bgDiv.style.backgroundImage = `url('${item.bgImageUrl}')`;
-    bgDiv.style.filter = 'blur(0px)';
-    bgDiv.style.display = '';
-    inner.style.background = 'rgba(0,0,0,0.45)';
-    inner.style.backdropFilter = 'none';
+    modal.style.backgroundImage = `url('${item.bgImageUrl}')`;
+    modal.style.backgroundSize = 'cover';
+    modal.style.backgroundPosition = 'center';
+    inner.style.background = 'rgba(0,0,0,0.5)';
   } else {
-    bgDiv.style.display = 'none';
+    modal.style.backgroundImage = '';
     inner.style.background = '';
   }
 
@@ -431,7 +419,7 @@ function openReadModal(item, container) {
     sliders.style.display = 'flex';
     container.querySelector('#arc-brightness').value = 40;
     container.querySelector('#arc-blur').value = 0;
-    applyBgFilters(inner, 40, 0);
+    applyBgFilters(container, 40, 0);
   } else {
     sliders.style.display = 'none';
   }
@@ -450,24 +438,37 @@ function openReadModal(item, container) {
   modal.classList.add('show');
 }
 
-function applyBgFilters(inner, brightness, blur) {
-  const bgDiv = document.querySelector('#arc-bg-layer');
-  if (bgDiv) {
-    bgDiv.style.filter = `blur(${blur}px)`;
-    bgDiv.style.setProperty('--arc-bg-opacity', ((100 - brightness) / 100 * 0.88).toFixed(3));
+function applyBgFilters(container, brightness, blur) {
+  const modal = container.querySelector('#arc-read-modal');
+  const inner = modal.querySelector('.tl-modal.arc-read-tl');
+  // Blur: CSS filter on the overlay background — use a pseudo via inline style trick:
+  // We scale+blur a ::before on the modal, but simplest: use backdrop on inner
+  // Actually: blur the background-image on modal using a wrapper approach
+  // Cleanest: set filter on a separate bg element inside the overlay
+  let bg = modal.querySelector('.arc-bg-el');
+  if (!bg) {
+    bg = document.createElement('div');
+    bg.className = 'arc-bg-el';
+    bg.style.cssText = 'position:absolute;inset:0;background-size:cover;background-position:center;z-index:0;pointer-events:none';
+    modal.insertBefore(bg, modal.firstChild);
   }
-  // Also darken the modal inner background
-  if (inner) {
-    const opacity = ((100 - brightness) / 100 * 0.75 + 0.1).toFixed(2);
-    inner.style.background = `rgba(0,0,0,${opacity})`;
-  }
+  bg.style.backgroundImage = modal.style.backgroundImage;
+  modal.style.backgroundImage = '';
+  bg.style.filter = `blur(${blur}px)`;
+  bg.style.transform = blur > 0 ? 'scale(1.05)' : 'scale(1)'; // prevent blur edges
+  const darkOpacity = ((100 - brightness) / 100 * 0.82 + 0.08).toFixed(2);
+  inner.style.background = `rgba(0,0,0,${darkOpacity})`;
 }
 
 function closeReadModal(container) {
-  container.querySelector('#arc-read-modal').classList.remove('show');
+  const modal = container.querySelector('#arc-read-modal');
+  modal.classList.remove('show');
+  modal.style.backgroundImage = '';
+  const bg = modal.querySelector('.arc-bg-el');
+  if (bg) { bg.style.backgroundImage = ''; bg.style.filter = ''; }
+  const inner = modal.querySelector('.tl-modal.arc-read-tl');
+  if (inner) inner.style.background = '';
   container.querySelector('#arc-read-sliders').style.display = 'none';
-  const bgDiv = document.querySelector('#arc-bg-layer');
-  if (bgDiv) bgDiv.style.display = 'none';
 }
 
 function openModal(item, container) {
