@@ -392,14 +392,21 @@ function openReadModal(item, container) {
   const modal = container.querySelector('#arc-read-modal');
   const inner = modal.querySelector('.tl-modal.arc-read-tl');
 
-  // Background: set directly on the overlay (which is already full-screen)
+  // Background: use an absolute-positioned child div inside the overlay
+  let bg = modal.querySelector('.arc-bg-el');
+  if (!bg) {
+    bg = document.createElement('div');
+    bg.className = 'arc-bg-el';
+    bg.style.cssText = 'position:absolute;inset:0;background-size:cover;background-position:center;z-index:0;pointer-events:none';
+    modal.insertBefore(bg, modal.firstChild);
+  }
   if (item.bgImageUrl) {
-    modal.style.backgroundImage = `url('${item.bgImageUrl}')`;
-    modal.style.backgroundSize = 'cover';
-    modal.style.backgroundPosition = 'center';
+    bg.style.backgroundImage = `url('${item.bgImageUrl}')`;
+    bg.style.filter = '';
+    bg.style.transform = 'scale(1)';
     inner.style.background = 'rgba(0,0,0,0.5)';
   } else {
-    modal.style.backgroundImage = '';
+    bg.style.backgroundImage = '';
     inner.style.background = '';
   }
 
@@ -441,10 +448,6 @@ function openReadModal(item, container) {
 function applyBgFilters(container, brightness, blur) {
   const modal = container.querySelector('#arc-read-modal');
   const inner = modal.querySelector('.tl-modal.arc-read-tl');
-  // Blur: CSS filter on the overlay background — use a pseudo via inline style trick:
-  // We scale+blur a ::before on the modal, but simplest: use backdrop on inner
-  // Actually: blur the background-image on modal using a wrapper approach
-  // Cleanest: set filter on a separate bg element inside the overlay
   let bg = modal.querySelector('.arc-bg-el');
   if (!bg) {
     bg = document.createElement('div');
@@ -452,10 +455,9 @@ function applyBgFilters(container, brightness, blur) {
     bg.style.cssText = 'position:absolute;inset:0;background-size:cover;background-position:center;z-index:0;pointer-events:none';
     modal.insertBefore(bg, modal.firstChild);
   }
-  bg.style.backgroundImage = modal.style.backgroundImage;
-  modal.style.backgroundImage = '';
+  // bg already has backgroundImage set; just update filters
   bg.style.filter = `blur(${blur}px)`;
-  bg.style.transform = blur > 0 ? 'scale(1.05)' : 'scale(1)'; // prevent blur edges
+  bg.style.transform = blur > 0 ? 'scale(1.05)' : 'scale(1)';
   const darkOpacity = ((100 - brightness) / 100 * 0.82 + 0.08).toFixed(2);
   inner.style.background = `rgba(0,0,0,${darkOpacity})`;
 }
@@ -463,9 +465,8 @@ function applyBgFilters(container, brightness, blur) {
 function closeReadModal(container) {
   const modal = container.querySelector('#arc-read-modal');
   modal.classList.remove('show');
-  modal.style.backgroundImage = '';
   const bg = modal.querySelector('.arc-bg-el');
-  if (bg) { bg.style.backgroundImage = ''; bg.style.filter = ''; }
+  if (bg) { bg.style.backgroundImage = ''; bg.style.filter = ''; bg.style.transform = ''; }
   const inner = modal.querySelector('.tl-modal.arc-read-tl');
   if (inner) inner.style.background = '';
   container.querySelector('#arc-read-sliders').style.display = 'none';
