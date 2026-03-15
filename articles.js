@@ -628,41 +628,22 @@ async function openGalleryPicker(container) {
   } catch(e) { dbError('加载图库', e); }
 }
 
-let _bgRaf = null;
-
 function setupBgLayer(imageUrl) {
   removeBgLayer();
-  // Two fixed divs sized+positioned to exactly match the modal box via rAF
+  // Both divs go INSIDE the overlay → same stacking context as .arc-read-tl
+  const overlay = document.querySelector('#arc-read-modal');
   const bgEl = document.createElement('div');
   bgEl.id = 'arc-bg-fixed';
-  bgEl.style.cssText = 'position:fixed;pointer-events:none;background-size:cover;background-position:center;border-radius:14px;overflow:hidden;z-index:504;transition:filter .15s';
+  bgEl.style.cssText = 'position:absolute;inset:0;pointer-events:none;background-size:cover;background-position:center;z-index:1';
   bgEl.style.backgroundImage = `url('${imageUrl}')`;
   const darkEl = document.createElement('div');
   darkEl.id = 'arc-dark-fixed';
-  darkEl.style.cssText = 'position:fixed;pointer-events:none;border-radius:14px;z-index:505;background:rgba(0,0,0,0)';
-  document.body.appendChild(bgEl);
-  document.body.appendChild(darkEl);
-
-  function sync() {
-    const box = document.querySelector('.tl-modal.arc-read-tl');
-    if (!box) return;
-    const r = box.getBoundingClientRect();
-    const pos = `left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px`;
-    bgEl.style.left   = r.left   + 'px';
-    bgEl.style.top    = r.top    + 'px';
-    bgEl.style.width  = r.width  + 'px';
-    bgEl.style.height = r.height + 'px';
-    darkEl.style.left   = r.left   + 'px';
-    darkEl.style.top    = r.top    + 'px';
-    darkEl.style.width  = r.width  + 'px';
-    darkEl.style.height = r.height + 'px';
-    _bgRaf = requestAnimationFrame(sync);
-  }
-  _bgRaf = requestAnimationFrame(sync);
+  darkEl.style.cssText = 'position:absolute;inset:0;pointer-events:none;z-index:2;background:rgba(0,0,0,0)';
+  overlay.insertBefore(darkEl, overlay.firstChild);
+  overlay.insertBefore(bgEl, overlay.firstChild);
 }
 
 function removeBgLayer() {
-  if (_bgRaf) { cancelAnimationFrame(_bgRaf); _bgRaf = null; }
   document.getElementById('arc-bg-fixed')?.remove();
   document.getElementById('arc-dark-fixed')?.remove();
 }
