@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>DAMIDAMIDAMIO</title>
+<title>指令集</title>
 
 <!-- ★ 填入你的 Supabase 配置 ★ -->
 <script>
@@ -14,8 +14,8 @@
   // 生成方式：在浏览器控制台运行：
   //   crypto.subtle.digest('SHA-256', new TextEncoder().encode('你的密码'))
   //     .then(b => console.log(Array.from(new Uint8Array(b)).map(x=>x.toString(16).padStart(2,'0')).join('')))
-  window.EDIT_PASSWORD_HASH  = 'a1fce4363854ff888cff4b8e7875d600c2682390412a8cf79b37d0b11148b0fa';  /* ← 编辑密码的哈希值 */
-  window.ENTRY_PASSWORD_HASH = '84698bf920abcd93f2a8990667d676ce9548975e5786eb670c494abc88960965'; /* ← 入口密码的哈希值 */
+  window.EDIT_PASSWORD_HASH  = 'your_edit_password_sha256_hash_here';  /* ← 编辑密码的哈希值 */
+  window.ENTRY_PASSWORD_HASH = 'your_entry_password_sha256_hash_here'; /* ← 入口密码的哈希值 */
 </script>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
@@ -101,7 +101,7 @@ textarea{resize:vertical;min-height:80px;line-height:1.6}
   z-index:500;align-items:center;justify-content:center;
 }
 .tl-modal-overlay.show{display:flex}
-#arc-read-modal.show{background:rgba(0,0,0,.7);overflow:hidden;position:relative}
+#arc-read-modal.show{background:rgba(0,0,0,.7);overflow:hidden}
 .tl-modal{
   background:var(--panel);border:1px solid var(--border);border-radius:14px;
   padding:28px;width:min(520px,92vw);max-height:85vh;overflow-y:auto;
@@ -251,7 +251,7 @@ textarea{resize:vertical;min-height:80px;line-height:1.6}
 .arc-item-preview{font-size:13px;color:#889;line-height:1.6;margin-bottom:10px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;white-space:pre-wrap;word-break:break-word}
 .arc-item-meta{display:flex;gap:10px;flex-wrap:wrap;font-size:11px;color:#667;padding-top:8px;border-top:1px solid rgba(255,255,255,.05)}
 /* Read modal */
-.arc-read-tl{max-width:720px;width:min(720px,95vw);position:relative;z-index:1}
+.arc-read-tl{max-width:720px;width:min(720px,95vw);position:relative;z-index:506}
 .arc-read-tl[data-has-bg]{background:transparent!important}
 #arc-bg-fixed,#arc-dark-fixed{pointer-events:none}
 .arc-read-body{font-size:15px;line-height:1.9;color:#cdd;word-break:break-word}
