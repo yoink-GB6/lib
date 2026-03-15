@@ -394,19 +394,11 @@ function openReadModal(item, container) {
 
   // Background image set directly on inner; ::before pseudo renders it via CSS
   if (item.bgImageUrl) {
-    inner.style.setProperty('--arc-bg-img', `url('${item.bgImageUrl}')`);
     inner.dataset.hasBg = '1';
-    // Ensure dark overlay div exists inside inner
-    let overlay = inner.querySelector('.arc-filter-overlay');
-    if (!overlay) {
-      overlay = document.createElement('div');
-      overlay.className = 'arc-filter-overlay';
-      inner.insertBefore(overlay, inner.firstChild);
-    }
-    overlay.style.background = 'rgba(0,0,0,0)';
+    setupBgLayer(item.bgImageUrl);
   } else {
-    inner.style.removeProperty('--arc-bg-img');
     delete inner.dataset.hasBg;
+    removeBgLayer();
   }
 
   container.querySelector('#arc-read-title').textContent = item.title || '（无标题）';
@@ -425,7 +417,6 @@ function openReadModal(item, container) {
     sliders.style.display = 'flex';
     container.querySelector('#arc-brightness').value = 100;
     container.querySelector('#arc-blur').value = 0;
-    inner.dataset.hasBg = '1';
     applyBgFilters(container, 100, 0);
   } else {
     sliders.style.display = 'none';
@@ -449,13 +440,12 @@ function applyBgFilters(container, brightness, blur) {
   const modal = container.querySelector('#arc-read-modal');
   const inner = modal.querySelector('.tl-modal.arc-read-tl');
   if (!inner || !inner.dataset.hasBg) return;
-  // blur via CSS variable → ::before filter
-  inner.style.setProperty('--arc-blur', blur + 'px');
-  // darkness via overlay div
-  const overlay = inner.querySelector('.arc-filter-overlay');
-  if (overlay) {
+  const bgEl = document.getElementById('arc-bg-fixed');
+  const darkEl = document.getElementById('arc-dark-fixed');
+  if (bgEl) bgEl.style.filter = blur > 0 ? `blur(${blur}px)` : '';
+  if (darkEl) {
     const darkOpacity = ((100 - brightness) / 100 * 0.85).toFixed(2);
-    overlay.style.background = `rgba(0,0,0,${darkOpacity})`;
+    darkEl.style.background = `rgba(0,0,0,${darkOpacity})`;
   }
 }
 
@@ -463,13 +453,8 @@ function closeReadModal(container) {
   const modal = container.querySelector('#arc-read-modal');
   modal.classList.remove('show');
   const inner = modal.querySelector('.tl-modal.arc-read-tl');
-  if (inner) {
-    inner.style.removeProperty('--arc-bg-img');
-    inner.style.removeProperty('--arc-blur');
-    delete inner.dataset.hasBg;
-    const overlay = inner.querySelector('.arc-filter-overlay');
-    if (overlay) overlay.style.background = '';
-  }
+  if (inner) delete inner.dataset.hasBg;
+  removeBgLayer();
   container.querySelector('#arc-read-sliders').style.display = 'none';
 }
 
@@ -641,6 +626,37 @@ async function openGalleryPicker(container) {
       el.addEventListener('mouseleave', () => el.style.borderColor = 'transparent');
     });
   } catch(e) { dbError('加载图库', e); }
+}
+
+let _bgRafId = null;
+
+function setupBgLayer(imageUrl) {
+  removeBgLayer();
+  const bgEl = document.createElement('div');
+  bgEl.id = 'arc-bg-fixed';
+  bgEl.style.cssText = 'position:fixed;z-index:1001;pointer-events:none;background-size:cover;background-position:center;border-radius:14px;transition:filter .15s';
+  bgEl.style.backgroundImage = `url('${imageUrl}')`;
+  const darkEl = document.createElement('div');
+  darkEl.id = 'arc-dark-fixed';
+  darkEl.style.cssText = 'position:fixed;z-index:1002;pointer-events:none;border-radius:14px;background:rgba(0,0,0,0)';
+  document.body.appendChild(bgEl);
+  document.body.appendChild(darkEl);
+  function syncPos() {
+    const modal = document.querySelector('.tl-modal.arc-read-tl');
+    if (!modal || !document.getElementById('arc-bg-fixed')) return;
+    const r = modal.getBoundingClientRect();
+    const style = `left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px`;
+    bgEl.style.cssText = bgEl.style.cssText.replace(/left:[^;]+;top:[^;]+;width:[^;]+;height:[^;]+;?/,'') + ';' + style;
+    darkEl.style.cssText = darkEl.style.cssText.replace(/left:[^;]+;top:[^;]+;width:[^;]+;height:[^;]+;?/,'') + ';' + style;
+    _bgRafId = requestAnimationFrame(syncPos);
+  }
+  _bgRafId = requestAnimationFrame(syncPos);
+}
+
+function removeBgLayer() {
+  if (_bgRafId) { cancelAnimationFrame(_bgRafId); _bgRafId = null; }
+  document.getElementById('arc-bg-fixed')?.remove();
+  document.getElementById('arc-dark-fixed')?.remove();
 }
 
 function updateSortButton(container) {
