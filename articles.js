@@ -628,22 +628,34 @@ async function openGalleryPicker(container) {
   } catch(e) { dbError('加载图库', e); }
 }
 
+let _bgRaf = null;
+
 function setupBgLayer(imageUrl) {
   removeBgLayer();
-  // Both divs go INSIDE the overlay → same stacking context as .arc-read-tl
   const overlay = document.querySelector('#arc-read-modal');
   const bgEl = document.createElement('div');
   bgEl.id = 'arc-bg-fixed';
-  bgEl.style.cssText = 'position:absolute;inset:0;pointer-events:none;background-size:100% auto;background-position:center top;background-repeat:no-repeat;z-index:1';
+  bgEl.style.cssText = 'position:absolute;inset:0;pointer-events:none;background-position:center top;background-repeat:no-repeat;z-index:1';
   bgEl.style.backgroundImage = `url('${imageUrl}')`;
   const darkEl = document.createElement('div');
   darkEl.id = 'arc-dark-fixed';
   darkEl.style.cssText = 'position:absolute;inset:0;pointer-events:none;z-index:2;background:rgba(0,0,0,0)';
   overlay.insertBefore(darkEl, overlay.firstChild);
   overlay.insertBefore(bgEl, overlay.firstChild);
+
+  function sync() {
+    const box = document.querySelector('.tl-modal.arc-read-tl');
+    if (box && bgEl.parentNode) {
+      const w = box.getBoundingClientRect().width;
+      bgEl.style.backgroundSize = w + 'px auto';
+    }
+    _bgRaf = requestAnimationFrame(sync);
+  }
+  _bgRaf = requestAnimationFrame(sync);
 }
 
 function removeBgLayer() {
+  if (_bgRaf) { cancelAnimationFrame(_bgRaf); _bgRaf = null; }
   document.getElementById('arc-bg-fixed')?.remove();
   document.getElementById('arc-dark-fixed')?.remove();
 }
