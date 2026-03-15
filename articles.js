@@ -392,12 +392,20 @@ function openReadModal(item, container) {
   const modal = container.querySelector('#arc-read-modal');
   const inner = modal.querySelector('.tl-modal.arc-read-tl');
 
-  // Background: use an absolute-positioned child div inside the overlay
+  // Background image set directly on inner; ::before pseudo renders it via CSS
   if (item.bgImageUrl) {
     inner.style.backgroundImage = `url('${item.bgImageUrl}')`;
     inner.style.backgroundSize = 'cover';
     inner.style.backgroundPosition = 'center';
     inner.dataset.hasBg = '1';
+    // Ensure dark overlay div exists inside inner
+    let overlay = inner.querySelector('.arc-filter-overlay');
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.className = 'arc-filter-overlay';
+      inner.insertBefore(overlay, inner.firstChild);
+    }
+    overlay.style.background = 'rgba(0,0,0,0)';
   } else {
     inner.style.backgroundImage = '';
     delete inner.dataset.hasBg;
@@ -443,19 +451,14 @@ function applyBgFilters(container, brightness, blur) {
   const modal = container.querySelector('#arc-read-modal');
   const inner = modal.querySelector('.tl-modal.arc-read-tl');
   if (!inner || !inner.dataset.hasBg) return;
-  // blur: apply to background-image via a separate blurred copy underneath
-  // darkness: use an inset box-shadow trick or an overlay div
-  let overlay = inner.querySelector('.arc-filter-overlay');
-  if (!overlay) {
-    overlay = document.createElement('div');
-    overlay.className = 'arc-filter-overlay';
-    overlay.style.cssText = 'position:absolute;inset:0;pointer-events:none;z-index:0;border-radius:inherit';
-    inner.insertBefore(overlay, inner.firstChild);
-  }
-  const darkOpacity = ((100 - brightness) / 100 * 0.88).toFixed(2);
-  overlay.style.background = `rgba(0,0,0,${darkOpacity})`;
-  // blur: apply filter to the background via a pseudo-layer
+  // blur via CSS variable → ::before filter
   inner.style.setProperty('--arc-blur', blur + 'px');
+  // darkness via overlay div
+  const overlay = inner.querySelector('.arc-filter-overlay');
+  if (overlay) {
+    const darkOpacity = ((100 - brightness) / 100 * 0.85).toFixed(2);
+    overlay.style.background = `rgba(0,0,0,${darkOpacity})`;
+  }
 }
 
 function closeReadModal(container) {
@@ -464,8 +467,8 @@ function closeReadModal(container) {
   const inner = modal.querySelector('.tl-modal.arc-read-tl');
   if (inner) {
     inner.style.backgroundImage = '';
-    delete inner.dataset.hasBg;
     inner.style.removeProperty('--arc-blur');
+    delete inner.dataset.hasBg;
     const overlay = inner.querySelector('.arc-filter-overlay');
     if (overlay) overlay.style.background = '';
   }
