@@ -393,29 +393,14 @@ function openReadModal(item, container) {
   const inner = modal.querySelector('.tl-modal.arc-read-tl');
 
   // Background: use an absolute-positioned child div inside the overlay
-  // Two fixed canvases: one for bg image, one for dark overlay
-  let bgCanvas = modal.querySelector('.arc-bg-canvas');
-  let darkCanvas = modal.querySelector('.arc-dark-canvas');
-  if (!bgCanvas) {
-    bgCanvas = document.createElement('div');
-    bgCanvas.className = 'arc-bg-canvas';
-    darkCanvas = document.createElement('div');
-    darkCanvas.className = 'arc-dark-canvas';
-    modal.insertBefore(darkCanvas, modal.firstChild);
-    modal.insertBefore(bgCanvas, modal.firstChild);
-  }
   if (item.bgImageUrl) {
-    bgCanvas.style.backgroundImage = `url('${item.bgImageUrl}')`;
-    bgCanvas.style.display = '';
-    darkCanvas.style.display = '';
-    inner.style.background = 'transparent';
-    inner.style.boxShadow = 'none';
+    inner.style.backgroundImage = `url('${item.bgImageUrl}')`;
+    inner.style.backgroundSize = 'cover';
+    inner.style.backgroundPosition = 'center';
+    inner.dataset.hasBg = '1';
   } else {
-    bgCanvas.style.backgroundImage = '';
-    bgCanvas.style.display = 'none';
-    darkCanvas.style.display = 'none';
-    inner.style.background = '';
-    inner.style.boxShadow = '';
+    inner.style.backgroundImage = '';
+    delete inner.dataset.hasBg;
   }
 
   container.querySelector('#arc-read-title').textContent = item.title || '（无标题）';
@@ -434,6 +419,7 @@ function openReadModal(item, container) {
     sliders.style.display = 'flex';
     container.querySelector('#arc-brightness').value = 100;
     container.querySelector('#arc-blur').value = 0;
+    inner.dataset.hasBg = '1';
     applyBgFilters(container, 100, 0);
   } else {
     sliders.style.display = 'none';
@@ -455,23 +441,34 @@ function openReadModal(item, container) {
 
 function applyBgFilters(container, brightness, blur) {
   const modal = container.querySelector('#arc-read-modal');
-  const bgCanvas = modal.querySelector('.arc-bg-canvas');
-  const darkCanvas = modal.querySelector('.arc-dark-canvas');
-  if (!bgCanvas || !bgCanvas.style.backgroundImage) return;
-  bgCanvas.style.filter = blur > 0 ? `blur(${blur}px)` : '';
+  const inner = modal.querySelector('.tl-modal.arc-read-tl');
+  if (!inner || !inner.dataset.hasBg) return;
+  // blur: apply to background-image via a separate blurred copy underneath
+  // darkness: use an inset box-shadow trick or an overlay div
+  let overlay = inner.querySelector('.arc-filter-overlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.className = 'arc-filter-overlay';
+    overlay.style.cssText = 'position:absolute;inset:0;pointer-events:none;z-index:0;border-radius:inherit';
+    inner.insertBefore(overlay, inner.firstChild);
+  }
   const darkOpacity = ((100 - brightness) / 100 * 0.88).toFixed(2);
-  darkCanvas.style.background = `rgba(0,0,0,${darkOpacity})`;
+  overlay.style.background = `rgba(0,0,0,${darkOpacity})`;
+  // blur: apply filter to the background via a pseudo-layer
+  inner.style.setProperty('--arc-blur', blur + 'px');
 }
 
 function closeReadModal(container) {
   const modal = container.querySelector('#arc-read-modal');
   modal.classList.remove('show');
-  const bgCanvas = modal.querySelector('.arc-bg-canvas');
-  const darkCanvas = modal.querySelector('.arc-dark-canvas');
-  if (bgCanvas) { bgCanvas.style.backgroundImage = ''; bgCanvas.style.filter = ''; bgCanvas.style.display = 'none'; }
-  if (darkCanvas) { darkCanvas.style.background = ''; darkCanvas.style.display = 'none'; }
   const inner = modal.querySelector('.tl-modal.arc-read-tl');
-  if (inner) { inner.style.background = ''; inner.style.boxShadow = ''; }
+  if (inner) {
+    inner.style.backgroundImage = '';
+    delete inner.dataset.hasBg;
+    inner.style.removeProperty('--arc-blur');
+    const overlay = inner.querySelector('.arc-filter-overlay');
+    if (overlay) overlay.style.background = '';
+  }
   container.querySelector('#arc-read-sliders').style.display = 'none';
 }
 
