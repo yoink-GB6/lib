@@ -393,22 +393,16 @@ function openReadModal(item, container) {
   const inner = modal.querySelector('.tl-modal.arc-read-tl');
 
   // Background: use an absolute-positioned child div inside the overlay
-  // bg lives inside inner (the modal box), so it's clipped to modal bounds
-  let bg = inner.querySelector('.arc-bg-el');
-  if (!bg) {
-    bg = document.createElement('div');
-    bg.className = 'arc-bg-el';
-    bg.style.cssText = 'position:absolute;inset:0;background-size:cover;background-position:center;z-index:0;pointer-events:none;border-radius:inherit';
-    inner.insertBefore(bg, inner.firstChild);
-  }
   if (item.bgImageUrl) {
-    bg.style.backgroundImage = `url('${item.bgImageUrl}')`;
-    bg.style.filter = '';
-    bg.style.transform = 'scale(1)';
-    inner.style.background = 'rgba(0,0,0,0.5)';
+    inner.style.backgroundImage = `url('${item.bgImageUrl}')`;
+    inner.style.backgroundSize = 'cover';
+    inner.style.backgroundPosition = 'center';
+    inner.style.backgroundAttachment = 'fixed';
+    inner.dataset.hasBg = '1';
   } else {
-    bg.style.backgroundImage = '';
-    inner.style.background = '';
+    inner.style.backgroundImage = '';
+    inner.style.backgroundAttachment = '';
+    delete inner.dataset.hasBg;
   }
 
   container.querySelector('#arc-read-title').textContent = item.title || '（无标题）';
@@ -425,9 +419,10 @@ function openReadModal(item, container) {
   const sliders = container.querySelector('#arc-read-sliders');
   if (item.bgImageUrl) {
     sliders.style.display = 'flex';
-    container.querySelector('#arc-brightness').value = 40;
+    container.querySelector('#arc-brightness').value = 100;
     container.querySelector('#arc-blur').value = 0;
-    applyBgFilters(container, 40, 0);
+    inner.style.setProperty('--arc-dark', '0');
+    inner.style.setProperty('--arc-blur', '0px');
   } else {
     sliders.style.display = 'none';
   }
@@ -449,22 +444,23 @@ function openReadModal(item, container) {
 function applyBgFilters(container, brightness, blur) {
   const modal = container.querySelector('#arc-read-modal');
   const inner = modal.querySelector('.tl-modal.arc-read-tl');
-  let bg = inner.querySelector('.arc-bg-el');
-  if (!bg) return; // not yet created
-  // bg already has backgroundImage set; just update filters
-  bg.style.filter = `blur(${blur}px)`;
-  bg.style.transform = blur > 0 ? 'scale(1.05)' : 'scale(1)';
-  const darkOpacity = ((100 - brightness) / 100 * 0.82 + 0.08).toFixed(2);
-  inner.style.background = `rgba(0,0,0,${darkOpacity})`;
+  if (!inner || !inner.dataset.hasBg) return;
+  const darkOpacity = ((100 - brightness) / 100 * 0.85).toFixed(2);
+  inner.style.setProperty('--arc-dark', darkOpacity);
+  inner.style.setProperty('--arc-blur', blur + 'px');
 }
 
 function closeReadModal(container) {
   const modal = container.querySelector('#arc-read-modal');
   modal.classList.remove('show');
-  const bg = inner?.querySelector('.arc-bg-el');
-  if (bg) { bg.style.backgroundImage = ''; bg.style.filter = ''; bg.style.transform = ''; }
   const inner = modal.querySelector('.tl-modal.arc-read-tl');
-  if (inner) inner.style.background = '';
+  if (inner) {
+    inner.style.backgroundImage = '';
+    inner.style.backgroundAttachment = '';
+    delete inner.dataset.hasBg;
+    inner.style.removeProperty('--arc-dark');
+    inner.style.removeProperty('--arc-blur');
+  }
   container.querySelector('#arc-read-sliders').style.display = 'none';
 }
 
