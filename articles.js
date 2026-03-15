@@ -628,33 +628,22 @@ async function openGalleryPicker(container) {
   } catch(e) { dbError('加载图库', e); }
 }
 
-let _bgRafId = null;
-
 function setupBgLayer(imageUrl) {
   removeBgLayer();
+  // Insert bg divs INSIDE the overlay, BEFORE the modal box → natural z-index below modal
+  const overlay = document.getElementById('arc-read-modal');
   const bgEl = document.createElement('div');
   bgEl.id = 'arc-bg-fixed';
-  bgEl.style.cssText = 'position:fixed;z-index:1001;pointer-events:none;background-size:cover;background-position:center;border-radius:14px;transition:filter .15s';
+  bgEl.style.cssText = 'position:absolute;inset:0;pointer-events:none;background-size:cover;background-position:center;z-index:0;transition:filter .15s';
   bgEl.style.backgroundImage = `url('${imageUrl}')`;
   const darkEl = document.createElement('div');
   darkEl.id = 'arc-dark-fixed';
-  darkEl.style.cssText = 'position:fixed;z-index:1002;pointer-events:none;border-radius:14px;background:rgba(0,0,0,0)';
-  document.body.appendChild(bgEl);
-  document.body.appendChild(darkEl);
-  function syncPos() {
-    const modal = document.querySelector('.tl-modal.arc-read-tl');
-    if (!modal || !document.getElementById('arc-bg-fixed')) return;
-    const r = modal.getBoundingClientRect();
-    const style = `left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px`;
-    bgEl.style.cssText = bgEl.style.cssText.replace(/left:[^;]+;top:[^;]+;width:[^;]+;height:[^;]+;?/,'') + ';' + style;
-    darkEl.style.cssText = darkEl.style.cssText.replace(/left:[^;]+;top:[^;]+;width:[^;]+;height:[^;]+;?/,'') + ';' + style;
-    _bgRafId = requestAnimationFrame(syncPos);
-  }
-  _bgRafId = requestAnimationFrame(syncPos);
+  darkEl.style.cssText = 'position:absolute;inset:0;pointer-events:none;z-index:0;background:rgba(0,0,0,0)';
+  overlay.insertBefore(darkEl, overlay.firstChild);
+  overlay.insertBefore(bgEl, overlay.firstChild);
 }
 
 function removeBgLayer() {
-  if (_bgRafId) { cancelAnimationFrame(_bgRafId); _bgRafId = null; }
   document.getElementById('arc-bg-fixed')?.remove();
   document.getElementById('arc-dark-fixed')?.remove();
 }
