@@ -393,16 +393,25 @@ function openReadModal(item, container) {
   const inner = modal.querySelector('.tl-modal.arc-read-tl');
 
   // Background: use an absolute-positioned child div inside the overlay
+  // Two fixed canvases: one for bg image, one for dark overlay
+  let bgCanvas = modal.querySelector('.arc-bg-canvas');
+  let darkCanvas = modal.querySelector('.arc-dark-canvas');
+  if (!bgCanvas) {
+    bgCanvas = document.createElement('div');
+    bgCanvas.className = 'arc-bg-canvas';
+    darkCanvas = document.createElement('div');
+    darkCanvas.className = 'arc-dark-canvas';
+    modal.insertBefore(darkCanvas, modal.firstChild);
+    modal.insertBefore(bgCanvas, modal.firstChild);
+  }
   if (item.bgImageUrl) {
-    inner.style.backgroundImage = `url('${item.bgImageUrl}')`;
-    inner.style.backgroundSize = 'cover';
-    inner.style.backgroundPosition = 'center';
-    inner.style.backgroundAttachment = 'fixed';
-    inner.dataset.hasBg = '1';
+    bgCanvas.style.backgroundImage = `url('${item.bgImageUrl}')`;
+    bgCanvas.style.display = '';
+    darkCanvas.style.display = '';
   } else {
-    inner.style.backgroundImage = '';
-    inner.style.backgroundAttachment = '';
-    delete inner.dataset.hasBg;
+    bgCanvas.style.backgroundImage = '';
+    bgCanvas.style.display = 'none';
+    darkCanvas.style.display = 'none';
   }
 
   container.querySelector('#arc-read-title').textContent = item.title || '（无标题）';
@@ -421,8 +430,7 @@ function openReadModal(item, container) {
     sliders.style.display = 'flex';
     container.querySelector('#arc-brightness').value = 100;
     container.querySelector('#arc-blur').value = 0;
-    inner.style.setProperty('--arc-dark', '0');
-    inner.style.setProperty('--arc-blur', '0px');
+    applyBgFilters(container, 100, 0);
   } else {
     sliders.style.display = 'none';
   }
@@ -443,24 +451,21 @@ function openReadModal(item, container) {
 
 function applyBgFilters(container, brightness, blur) {
   const modal = container.querySelector('#arc-read-modal');
-  const inner = modal.querySelector('.tl-modal.arc-read-tl');
-  if (!inner || !inner.dataset.hasBg) return;
-  const darkOpacity = ((100 - brightness) / 100 * 0.85).toFixed(2);
-  inner.style.setProperty('--arc-dark', darkOpacity);
-  inner.style.setProperty('--arc-blur', blur + 'px');
+  const bgCanvas = modal.querySelector('.arc-bg-canvas');
+  const darkCanvas = modal.querySelector('.arc-dark-canvas');
+  if (!bgCanvas || !bgCanvas.style.backgroundImage) return;
+  bgCanvas.style.filter = blur > 0 ? `blur(${blur}px)` : '';
+  const darkOpacity = ((100 - brightness) / 100 * 0.88).toFixed(2);
+  darkCanvas.style.background = `rgba(0,0,0,${darkOpacity})`;
 }
 
 function closeReadModal(container) {
   const modal = container.querySelector('#arc-read-modal');
   modal.classList.remove('show');
-  const inner = modal.querySelector('.tl-modal.arc-read-tl');
-  if (inner) {
-    inner.style.backgroundImage = '';
-    inner.style.backgroundAttachment = '';
-    delete inner.dataset.hasBg;
-    inner.style.removeProperty('--arc-dark');
-    inner.style.removeProperty('--arc-blur');
-  }
+  const bgCanvas = modal.querySelector('.arc-bg-canvas');
+  const darkCanvas = modal.querySelector('.arc-dark-canvas');
+  if (bgCanvas) { bgCanvas.style.backgroundImage = ''; bgCanvas.style.filter = ''; bgCanvas.style.display = 'none'; }
+  if (darkCanvas) { darkCanvas.style.background = ''; darkCanvas.style.display = 'none'; }
   container.querySelector('#arc-read-sliders').style.display = 'none';
 }
 
