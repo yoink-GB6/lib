@@ -634,7 +634,7 @@ function setupBgLayer(imageUrl) {
   const overlay = document.querySelector('#arc-read-modal');
   const bgEl = document.createElement('div');
   bgEl.id = 'arc-bg-fixed';
-  bgEl.style.cssText = 'position:absolute;inset:0;pointer-events:none;background-size:cover;background-position:center;z-index:1';
+  bgEl.style.cssText = 'position:absolute;inset:0;pointer-events:none;background-size:auto 100%;background-position:center top;z-index:1';
   bgEl.style.backgroundImage = `url('${imageUrl}')`;
   const darkEl = document.createElement('div');
   darkEl.id = 'arc-dark-fixed';
