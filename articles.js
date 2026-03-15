@@ -394,9 +394,7 @@ function openReadModal(item, container) {
 
   // Background image set directly on inner; ::before pseudo renders it via CSS
   if (item.bgImageUrl) {
-    inner.style.backgroundImage = `url('${item.bgImageUrl}')`;
-    inner.style.backgroundSize = 'cover';
-    inner.style.backgroundPosition = 'center';
+    inner.style.setProperty('--arc-bg-img', `url('${item.bgImageUrl}')`);
     inner.dataset.hasBg = '1';
     // Ensure dark overlay div exists inside inner
     let overlay = inner.querySelector('.arc-filter-overlay');
@@ -407,7 +405,7 @@ function openReadModal(item, container) {
     }
     overlay.style.background = 'rgba(0,0,0,0)';
   } else {
-    inner.style.backgroundImage = '';
+    inner.style.removeProperty('--arc-bg-img');
     delete inner.dataset.hasBg;
   }
 
@@ -466,7 +464,7 @@ function closeReadModal(container) {
   modal.classList.remove('show');
   const inner = modal.querySelector('.tl-modal.arc-read-tl');
   if (inner) {
-    inner.style.backgroundImage = '';
+    inner.style.removeProperty('--arc-bg-img');
     inner.style.removeProperty('--arc-blur');
     delete inner.dataset.hasBg;
     const overlay = inner.querySelector('.arc-filter-overlay');
