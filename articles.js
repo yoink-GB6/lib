@@ -150,7 +150,7 @@ function buildHTML() {
   background:rgba(0,0,0,.65);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.12);
   border-radius:12px;padding:10px 18px;gap:20px;align-items:center;z-index:10001;white-space:nowrap">
   <label style="font-size:11px;color:#aaa;display:flex;align-items:center;gap:8px">
-    ☀️ <input id="arc-brightness" type="range" min="0" max="100" value="100" style="width:110px;accent-color:var(--accent)"/>
+    ☀️ <input id="arc-brightness" type="range" min="0" max="100" value="40" style="width:110px;accent-color:var(--accent)"/>
   </label>
   <label style="font-size:11px;color:#aaa;display:flex;align-items:center;gap:8px">
     🌫️ <input id="arc-blur" type="range" min="0" max="20" value="0" style="width:110px;accent-color:var(--accent)"/>
@@ -393,12 +393,13 @@ function openReadModal(item, container) {
   const inner = modal.querySelector('.tl-modal.arc-read-tl');
 
   // Background: use an absolute-positioned child div inside the overlay
-  let bg = modal.querySelector('.arc-bg-el');
+  // bg lives inside inner (the modal box), so it's clipped to modal bounds
+  let bg = inner.querySelector('.arc-bg-el');
   if (!bg) {
     bg = document.createElement('div');
     bg.className = 'arc-bg-el';
-    bg.style.cssText = 'position:absolute;inset:0;background-size:cover;background-position:center;z-index:0;pointer-events:none';
-    modal.insertBefore(bg, modal.firstChild);
+    bg.style.cssText = 'position:absolute;inset:0;background-size:cover;background-position:center;z-index:0;pointer-events:none;border-radius:inherit';
+    inner.insertBefore(bg, inner.firstChild);
   }
   if (item.bgImageUrl) {
     bg.style.backgroundImage = `url('${item.bgImageUrl}')`;
@@ -424,9 +425,9 @@ function openReadModal(item, container) {
   const sliders = container.querySelector('#arc-read-sliders');
   if (item.bgImageUrl) {
     sliders.style.display = 'flex';
-    container.querySelector('#arc-brightness').value = 100;
+    container.querySelector('#arc-brightness').value = 40;
     container.querySelector('#arc-blur').value = 0;
-    applyBgFilters(container, 100, 0);
+    applyBgFilters(container, 40, 0);
   } else {
     sliders.style.display = 'none';
   }
@@ -448,13 +449,8 @@ function openReadModal(item, container) {
 function applyBgFilters(container, brightness, blur) {
   const modal = container.querySelector('#arc-read-modal');
   const inner = modal.querySelector('.tl-modal.arc-read-tl');
-  let bg = modal.querySelector('.arc-bg-el');
-  if (!bg) {
-    bg = document.createElement('div');
-    bg.className = 'arc-bg-el';
-    bg.style.cssText = 'position:absolute;inset:0;background-size:cover;background-position:center;z-index:0;pointer-events:none';
-    modal.insertBefore(bg, modal.firstChild);
-  }
+  let bg = inner.querySelector('.arc-bg-el');
+  if (!bg) return; // not yet created
   // bg already has backgroundImage set; just update filters
   bg.style.filter = `blur(${blur}px)`;
   bg.style.transform = blur > 0 ? 'scale(1.05)' : 'scale(1)';
@@ -465,7 +461,7 @@ function applyBgFilters(container, brightness, blur) {
 function closeReadModal(container) {
   const modal = container.querySelector('#arc-read-modal');
   modal.classList.remove('show');
-  const bg = modal.querySelector('.arc-bg-el');
+  const bg = inner?.querySelector('.arc-bg-el');
   if (bg) { bg.style.backgroundImage = ''; bg.style.filter = ''; bg.style.transform = ''; }
   const inner = modal.querySelector('.tl-modal.arc-read-tl');
   if (inner) inner.style.background = '';
