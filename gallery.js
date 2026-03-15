@@ -599,6 +599,21 @@ function addNewTag(container) {
   renderTagPicker(container, [...current, newTag]);
 }
 
+async function fetchAndUploadUrl(url) {
+  const resp = await fetch(url);
+  if (!resp.ok) throw new Error(`fetch failed: ${resp.status}`);
+  const blob = await resp.blob();
+  const mime = blob.type || 'image/jpeg';
+  const ext = mime.split('/')[1]?.split('+')[0] || 'jpg';
+  const storagePath = `${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+  const { error: upErr } = await supaClient.storage.from(BUCKET).upload(storagePath, blob, {
+    contentType: mime, cacheControl: '3600', upsert: false
+  });
+  if (upErr) throw upErr;
+  const { data } = supaClient.storage.from(BUCKET).getPublicUrl(storagePath);
+  return { imageUrl: data.publicUrl, storagePath };
+}
+
 async function saveItem(container) {
   const title = container.querySelector('#gal-title').value.trim();
   const description = container.querySelector('#gal-desc').value.trim();
@@ -632,12 +647,19 @@ async function saveItem(container) {
       closeModal(container);
       setSyncStatus('syncing');
       try {
+        let imageUrl = urls[0], storagePath = '';
+        try {
+          const up = await fetchAndUploadUrl(urls[0]);
+          imageUrl = up.imageUrl; storagePath = up.storagePath;
+        } catch(fetchErr) {
+          console.warn('无法下载图片，以链接直接保存:', fetchErr);
+        }
         const { error } = await supaClient.from(TABLE).insert({
           title, description, author, tags_json: JSON.stringify(selectedItemTags),
-          image_url: urls[0], storage_path: '',
+          image_url: imageUrl, storage_path: storagePath,
         });
         if (error) throw error;
-        showToast('已添加');
+        showToast(storagePath ? '已下载并上传' : '已以链接保存（跨域限制）');
         await fetchAll(); setSyncStatus('ok');
       } catch(e) { dbError('保存图片', e); }
     } else {
@@ -744,7 +766,13 @@ async function runModalBatch(container, items, author, tags) {
         const { data: urlData } = supaClient.storage.from(BUCKET).getPublicUrl(storagePath);
         imageUrl = urlData.publicUrl;
       } else {
-        imageUrl = item.url;
+        try {
+          const up = await fetchAndUploadUrl(item.url);
+          imageUrl = up.imageUrl; storagePath = up.storagePath;
+        } catch(fetchErr) {
+          console.warn('无法下载，以链接保存:', fetchErr);
+          imageUrl = item.url;
+        }
       }
       const { error } = await supaClient.from(TABLE).insert({
         title: '',
