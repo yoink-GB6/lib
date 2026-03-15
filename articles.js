@@ -408,10 +408,14 @@ function openReadModal(item, container) {
     bgCanvas.style.backgroundImage = `url('${item.bgImageUrl}')`;
     bgCanvas.style.display = '';
     darkCanvas.style.display = '';
+    inner.style.background = 'transparent';
+    inner.style.boxShadow = 'none';
   } else {
     bgCanvas.style.backgroundImage = '';
     bgCanvas.style.display = 'none';
     darkCanvas.style.display = 'none';
+    inner.style.background = '';
+    inner.style.boxShadow = '';
   }
 
   container.querySelector('#arc-read-title').textContent = item.title || '（无标题）';
@@ -466,6 +470,8 @@ function closeReadModal(container) {
   const darkCanvas = modal.querySelector('.arc-dark-canvas');
   if (bgCanvas) { bgCanvas.style.backgroundImage = ''; bgCanvas.style.filter = ''; bgCanvas.style.display = 'none'; }
   if (darkCanvas) { darkCanvas.style.background = ''; darkCanvas.style.display = 'none'; }
+  const inner = modal.querySelector('.tl-modal.arc-read-tl');
+  if (inner) { inner.style.background = ''; inner.style.boxShadow = ''; }
   container.querySelector('#arc-read-sliders').style.display = 'none';
 }
 
