@@ -635,7 +635,7 @@ function setupBgLayer(imageUrl) {
   const overlay = document.querySelector('#arc-read-modal');
   const bgEl = document.createElement('div');
   bgEl.id = 'arc-bg-fixed';
-  bgEl.style.cssText = 'position:absolute;inset:0;pointer-events:none;background-position:center top;background-repeat:no-repeat;z-index:1';
+  bgEl.style.cssText = 'position:absolute;inset:0;pointer-events:none;background-position:center center;background-repeat:no-repeat;z-index:1';
   bgEl.style.backgroundImage = `url('${imageUrl}')`;
   const darkEl = document.createElement('div');
   darkEl.id = 'arc-dark-fixed';
@@ -643,15 +643,29 @@ function setupBgLayer(imageUrl) {
   overlay.insertBefore(darkEl, overlay.firstChild);
   overlay.insertBefore(bgEl, overlay.firstChild);
 
-  function sync() {
-    const box = document.querySelector('.tl-modal.arc-read-tl');
-    if (box && bgEl.parentNode) {
-      const w = box.getBoundingClientRect().width;
-      bgEl.style.backgroundSize = w + 'px auto';
+  // Load image to get natural dimensions
+  const img = new Image();
+  img.src = imageUrl;
+  img.onload = () => {
+    const imgRatio = img.naturalWidth / img.naturalHeight; // >1 = landscape, <1 = portrait
+
+    function sync() {
+      const box = document.querySelector('.tl-modal.arc-read-tl');
+      if (box && bgEl.parentNode) {
+        const boxW = box.getBoundingClientRect().width;
+        const boxH = box.getBoundingClientRect().height;
+        const boxRatio = boxW / boxH;
+        // If image is wider than box (relative): fit by height; else fit by width
+        if (imgRatio > boxRatio) {
+          bgEl.style.backgroundSize = `auto ${boxH}px`;
+        } else {
+          bgEl.style.backgroundSize = `${boxW}px auto`;
+        }
+      }
+      _bgRaf = requestAnimationFrame(sync);
     }
     _bgRaf = requestAnimationFrame(sync);
-  }
-  _bgRaf = requestAnimationFrame(sync);
+  };
 }
 
 function removeBgLayer() {
