@@ -10,7 +10,7 @@ let tags = [];            // All available tags
 let selectedTags = [];    // Currently selected tags for filtering
 let searchKeyword = '';   // Search keyword for content filtering
 let selectedAuthor = '';  // Selected author for exact match filtering
-let sortBy = 'asc';           // 'asc' = 旧→新, 'desc' = 新→旧
+let sortBy = 'desc';           // 'asc' = 旧→新, 'desc' = 新→旧
 let editItemId = null;
 let realtimeCh = null;
 let pageContainer = null; // Store container reference for use in event handlers
