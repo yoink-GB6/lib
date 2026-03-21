@@ -701,7 +701,7 @@ function renderMarkdown(raw) {
     return text
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
       // restore allowed html tags after escaping (basic allowlist)
-      .replace(/&lt;(\/?(b|i|u|s|em|strong|mark|sub|sup|br|span|a|code|small|del|ins)[^&]*)&gt;/gi, '<$1>')
+      .replace(/&lt;(\/?(b|i|u|s|p|em|strong|mark|sub|sup|br|span|a|code|small|del|ins)[^&]*)&gt;/gi, '<$1>')
       // code span (before bold/italic to avoid conflicts)
       .replace(/`([^`]+)`/g, '<code class="arc-inline-code">$1</code>')
       // bold+italic
