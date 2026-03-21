@@ -362,7 +362,7 @@ function renderGrid(container) {
   const editor = isEditor();
   grid.innerHTML = filtered.map(item => {
     const tagsHtml = item.tags.map(t => `<span class="lib-item-tag">${escHtml(t)}</span>`).join('');
-    const preview = item.body.length > 120 ? item.body.slice(0, 120) + '…' : item.body;
+    const preview = (item.body.replace(/\u200b/g, '').length > 120 ? item.body.replace(/\u200b/g, '').slice(0, 120) + '…' : item.body.replace(/\u200b/g, ''));
     const wordCount = item.body.length;
     const date = new Date(item.createdAt).toLocaleDateString('zh-CN', { year: 'numeric', month: 'short', day: 'numeric' });
     const authorHtml = item.author && item.author !== 'unknown'
@@ -689,6 +689,8 @@ function updateArticlesUI(container) {
 
 // ── Markdown renderer ──────────────────────────────
 function renderMarkdown(raw) {
+  // Strip zero-width spaces
+  raw = raw.replace(/\u200b/g, '');
   const lines = raw.split('\n');
   const out = [];
   let i = 0;
@@ -720,7 +722,7 @@ function renderMarkdown(raw) {
 
   function flushPara(buf) {
     if (!buf.length) return;
-    out.push(`<p class="arc-para">${inlineHtml(buf.join('\n'))}</p>`);
+    out.push(`<p class="arc-para">${buf.map(l => inlineHtml(l)).join('<br>')}</p>`);
   }
 
   let paraBuf = [];
