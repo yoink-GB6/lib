@@ -10,12 +10,9 @@
 <script>
   window.SUPABASE_URL  = 'https://hrgottdtlnihablruxtr.supabase.co';
   window.SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhyZ290dGR0bG5paGFibHJ1eHRyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEzMTcxOTAsImV4cCI6MjA4Njg5MzE5MH0.6Ng0E96W8VLnATqWgc_o7xVKCrzlewn0J-ba2ChpcE4';
-  // 密码哈希值（SHA-256），不存明文密码
-  // 生成方式：在浏览器控制台运行：
-  //   crypto.subtle.digest('SHA-256', new TextEncoder().encode('你的密码'))
-  //     .then(b => console.log(Array.from(new Uint8Array(b)).map(x=>x.toString(16).padStart(2,'0')).join('')))
-  window.EDIT_PASSWORD_HASH  = 'a1fce4363854ff888cff4b8e7875d600c2682390412a8cf79b37d0b11148b0fa';  /* ← 编辑密码的哈希值 */
-  window.ENTRY_PASSWORD_HASH = '84698bf920abcd93f2a8990667d676ce9548975e5786eb670c494abc88960965'; /* ← 入口密码的哈希值 */
+  // 编辑账号的邮箱（就是你在 Supabase → Authentication → Users 里建的那个）。
+  // 密码不写在这里，登录时手输，由 Supabase 服务端校验。
+  window.AUTH_EMAIL = 'editor@moon-site.com';  /* ← 改成你的账号邮箱 */
 </script>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
@@ -101,7 +98,7 @@ textarea{resize:vertical;min-height:80px;line-height:1.6}
   z-index:500;align-items:center;justify-content:center;
 }
 .tl-modal-overlay.show{display:flex}
-#arc-read-modal.show{background:rgba(0,0,0,.7)}
+#arc-read-modal.show{background:rgba(0,0,0,.7);overflow:hidden}
 .tl-modal{
   background:var(--panel);border:1px solid var(--border);border-radius:14px;
   padding:28px;width:min(520px,92vw);max-height:85vh;overflow-y:auto;
@@ -210,17 +207,6 @@ textarea{resize:vertical;min-height:80px;line-height:1.6}
 .lib-tag-checkbox:hover{background:#22263a;border-color:var(--accent)}
 .lib-tag-checkbox input[type="checkbox"]{margin:0;cursor:pointer}
 
-/* Site entry gate */
-#entry-gate{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;align-items:center;justify-content:center}
-#entry-box{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:32px;width:min(360px,90vw);text-align:center}
-#entry-box h2{font-size:17px;font-weight:700;color:var(--accent);margin-bottom:8px}
-#entry-box p{font-size:13px;color:var(--muted);margin-bottom:20px}
-#entry-input{width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:14px;margin-bottom:10px;box-sizing:border-box;text-align:center;letter-spacing:2px}
-#entry-input:focus{outline:none;border-color:var(--accent)}
-#entry-error{color:var(--red);font-size:12px;margin-bottom:10px;display:none}
-#entry-btn{width:100%;padding:10px;background:var(--accent);color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:14px;font-weight:600}
-#entry-btn:hover{opacity:.88}
-
 /* Tab nav */
 #tab-nav{display:flex;gap:4px;margin-right:auto}
 .tab-btn{background:none;border:none;color:var(--muted);cursor:pointer;padding:6px 16px;border-radius:6px;font-size:13px;font-weight:600;transition:all .15s}
@@ -251,9 +237,18 @@ textarea{resize:vertical;min-height:80px;line-height:1.6}
 .arc-item-preview{font-size:13px;color:#889;line-height:1.6;margin-bottom:10px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;white-space:pre-wrap;word-break:break-word}
 .arc-item-meta{display:flex;gap:10px;flex-wrap:wrap;font-size:11px;color:#667;padding-top:8px;border-top:1px solid rgba(255,255,255,.05)}
 /* Read modal */
-.arc-read-tl{max-width:720px;width:min(720px,95vw);position:relative;z-index:3}
-.arc-read-tl[data-has-bg]{background:transparent!important}
-#arc-bg-fixed,#arc-dark-fixed{pointer-events:none}
+.arc-read-tl{max-width:720px;width:min(720px,95vw)}
+/* bg layer sits behind the modal via the overlay itself */
+#arc-read-modal .arc-bg-canvas{
+  position:fixed;inset:0;z-index:0;pointer-events:none;
+  background-size:cover;background-position:center;
+  transition:filter .15s
+}
+#arc-read-modal .arc-dark-canvas{
+  position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:rgba(0,0,0,0)
+}
+#arc-read-modal .tl-modal{position:relative;z-index:1}
 .arc-read-body{font-size:15px;line-height:1.9;color:#cdd;word-break:break-word}
 .arc-para{margin:0 0 1em}
 .arc-h1,.arc-h2,.arc-h3,.arc-h4,.arc-h5,.arc-h6{color:var(--text);font-weight:700;line-height:1.3;margin:1.4em 0 .5em}
@@ -273,16 +268,6 @@ textarea{resize:vertical;min-height:80px;line-height:1.6}
 
 </head>
 <body>
-
-<div id="entry-gate">
-  <div id="entry-box">
-    <h2>🔐 访问验证</h2>
-    <p>请输入密码以继续</p>
-    <input id="entry-input" type="password" placeholder="••••••••" autocomplete="off"/>
-    <div id="entry-error">密码错误，请重试</div>
-    <button id="entry-btn">进入</button>
-  </div>
-</div>
 
 <div id="app">
   <!-- Topbar -->
@@ -304,54 +289,23 @@ textarea{resize:vertical;min-height:80px;line-height:1.6}
 <!-- Password modal -->
 <div id="pw-modal">
   <div id="pw-box">
-    <h2>🔐 输入编辑密码</h2>
+    <h2>🔐 解锁编辑</h2>
     <label>密码</label>
     <input id="pw-input" type="password" placeholder="请输入密码" autocomplete="current-password"/>
     <div id="pw-error">密码错误，请重试</div>
     <div class="mbtns" style="justify-content:flex-end;margin-top:4px">
       <button class="btn bn" onclick="closePwModal()">取消</button>
-      <button class="btn bp" onclick="submitPw()">确认</button>
+      <button class="btn bp" id="pw-submit" onclick="submitPw()">确认</button>
     </div>
   </div>
 </div>
 
 <script type="module">
 import { showToast } from './ui.js';
-import { isEditor, tryUnlock, lock, onAuthChange, checkEntryPassword } from './auth.js';
+import { isEditor, signIn, lock, onAuthChange, initAuth } from './auth.js';
 import { mount as mountLibrary, unmount as unmountLibrary } from './library.js';
 import { mount as mountGallery, unmount as unmountGallery } from './gallery.js';
 import { mount as mountArticles, unmount as unmountArticles } from './articles.js';
-
-// ── Site entry gate ───────────────────────────────
-const ENTRY_KEY = 'site_unlocked';
-
-function checkEntry() {
-  if (sessionStorage.getItem(ENTRY_KEY) === '1') {
-    document.getElementById('entry-gate').style.display = 'none';
-    return true;
-  }
-  return false;
-}
-
-async function submitEntry() {
-  const val = document.getElementById('entry-input').value;
-  const ok = await checkEntryPassword(val);
-  if (ok) {
-    sessionStorage.setItem(ENTRY_KEY, '1');
-    document.getElementById('entry-gate').style.display = 'none';
-    initApp();
-  } else {
-    document.getElementById('entry-error').style.display = 'block';
-    document.getElementById('entry-input').value = '';
-    document.getElementById('entry-input').focus();
-  }
-}
-
-document.getElementById('entry-btn').addEventListener('click', submitEntry);
-document.getElementById('entry-input').addEventListener('keydown', e => {
-  if (e.key === 'Enter') submitEntry();
-  document.getElementById('entry-error').style.display = 'none';
-});
 
 // ── Auth UI ────────────────────────────────────────
 onAuthChange(editor => {
@@ -367,7 +321,7 @@ onAuthChange(editor => {
 
 // ── Password modal ─────────────────────────────────
 window.showPwModal = function() {
-  if (isEditor()) { lock(); return; }
+  if (isEditor()) { lock().then(() => showToast('🔒 已退出编辑模式')); return; }
   document.getElementById('pw-input').value = '';
   document.getElementById('pw-error').style.display = 'none';
   document.getElementById('pw-modal').classList.add('show');
@@ -378,16 +332,31 @@ window.closePwModal = function() {
   document.getElementById('pw-error').style.display = 'none';
   document.getElementById('pw-input').value = '';
 };
+let _signingIn = false;
 window.submitPw = async function() {
-  const pw = document.getElementById('pw-input').value;
-  const success = await tryUnlock(pw);
-  if (success) {
+  if (_signingIn) return;                      // 网络请求，防连点
+  const input = document.getElementById('pw-input');
+  const err   = document.getElementById('pw-error');
+  const btn   = document.getElementById('pw-submit');
+
+  _signingIn = true;
+  btn.disabled = true;
+  btn.textContent = '验证中…';
+
+  const { ok, message } = await signIn(input.value);
+
+  _signingIn = false;
+  btn.disabled = false;
+  btn.textContent = '确认';
+
+  if (ok) {
     window.closePwModal();
     showToast('✅ 已解锁编辑模式');
   } else {
-    document.getElementById('pw-error').style.display = 'block';
-    document.getElementById('pw-input').value = '';
-    document.getElementById('pw-input').focus();
+    err.textContent = message;
+    err.style.display = 'block';
+    input.value = '';
+    input.focus();
   }
 };
 document.getElementById('pw-input').addEventListener('keydown', e => {
@@ -427,13 +396,9 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
   btn.addEventListener('click', () => switchTab(btn.dataset.tab));
 });
 
-async function initApp() {
-  await switchTab('library');
-}
-
-if (checkEntry()) {
-  await initApp();
-}
+// 先恢复登录态（localStorage 里有 session 就直接是编辑模式），再挂载页面
+await initAuth();
+await switchTab('library');
 </script>
 
 </body>
